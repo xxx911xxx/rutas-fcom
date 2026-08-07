@@ -1,0 +1,27 @@
+name: Enviar Ruta Matutina
+
+on:
+  schedule:
+    # Esto significa: A las 07:00 AM (hora de España), de Lunes (1) a Viernes (5)
+    - cron: '0 5 * * 1-5' 
+  workflow_dispatch: # Esto nos permite darle a un botón para probarlo manualmente cuando queramos
+
+jobs:
+  ejecutar-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar el código
+        uses: actions/checkout@v3
+        
+      - name: Instalar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Ejecutar la magia
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: node ruta.js
