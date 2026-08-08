@@ -8,6 +8,9 @@
     <style>
         .asiento { transition: all 0.2s; }
         .asiento:active { transform: scale(0.95); }
+        /* Animación suave para la cartera */
+        #modalCartera { transition: opacity 0.3s ease; }
+        #modalCartera > div { transition: transform 0.3s ease; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
@@ -33,9 +36,7 @@
         <!-- SECCIÓN 1: SALDOS -->
         <div class="mb-6">
             <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">💰 Cuentas y Bizums</h2>
-            <div id="listaSaldosAdmin" class="grid grid-cols-2 gap-2">
-                <!-- Se rellena con JS -->
-            </div>
+            <div id="listaSaldosAdmin" class="grid grid-cols-2 gap-2"></div>
         </div>
 
         <hr class="border-slate-300 mb-6">
@@ -55,10 +56,13 @@
     </div>
 
     <!-- PANTALLA 3: MODO AMIGOS (RESERVAS Y COCHE) -->
-    <div id="pantallaAmigos" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl p-6 mt-10 hidden">
+    <div id="pantallaAmigos" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl p-6 mt-10 hidden relative">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-emerald-600">🚗 Elige tu sitio</h1>
-            <button onclick="cerrarSesion()" class="text-slate-500 underline">Salir</button>
+            <div class="flex items-center gap-3">
+                <button onclick="abrirCartera()" class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold text-sm shadow-sm border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1">💳 Cartera</button>
+                <button onclick="cerrarSesion()" class="text-slate-500 underline text-sm font-bold">Salir</button>
+            </div>
         </div>
         
         <label class="font-bold text-slate-700 mb-2 block">1. Selecciona el día:</label>
@@ -88,6 +92,26 @@
         </div>
     </div>
 
+    <!-- MODAL DE LA CARTERA VIRTUAL -->
+    <div id="modalCartera" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-end sm:items-center z-50 p-4 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform translate-y-full sm:translate-y-0">
+            <div class="bg-slate-800 p-5 text-white flex justify-between items-center">
+                <h2 class="font-black text-xl tracking-wide">💳 Mi Cartera</h2>
+                <button onclick="cerrarCartera()" class="text-slate-300 hover:text-white font-black text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6">
+                <div class="text-center mb-6">
+                    <p class="text-slate-500 text-sm font-bold uppercase tracking-widest">Saldo Disponible</p>
+                    <p id="carteraSaldoTotal" class="text-5xl font-black text-slate-800 mt-2 tracking-tighter">0€</p>
+                </div>
+                <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-b-2 border-slate-100 pb-2">Historial de movimientos</div>
+                <div id="listaMovimientos" class="space-y-3 max-h-60 overflow-y-auto pr-2">
+                    <!-- Los movimientos se insertan por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
@@ -104,7 +128,7 @@
         let viajeSeleccionado = null;
 
         // ==========================================
-        // SISTEMA DE TOASTS (NOTIFICACIONES MODERNAS)
+        // SISTEMA DE TOASTS
         // ==========================================
         function mostrarToast(mensaje, tipo = 'exito') {
             let container = document.getElementById('toast-container');
@@ -114,33 +138,21 @@
                 container.className = 'fixed bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-50 pointer-events-none px-4';
                 document.body.appendChild(container);
             }
-
             const toast = document.createElement('div');
-            
-            // Colores según el tipo
-            let colorBg = 'bg-slate-800'; // Éxito (Oscuro elegante)
-            if (tipo === 'error') colorBg = 'bg-rose-600'; // Error (Rojo)
-            if (tipo === 'aviso') colorBg = 'bg-amber-500'; // Aviso (Naranja)
-
+            let colorBg = tipo === 'error' ? 'bg-rose-600' : (tipo === 'aviso' ? 'bg-amber-500' : 'bg-slate-800');
             toast.className = `${colorBg} text-white px-5 py-3 rounded-2xl shadow-2xl font-bold text-sm transform transition-all duration-300 translate-y-10 opacity-0 flex items-center text-center max-w-sm`;
             toast.innerText = mensaje;
-            
             container.appendChild(toast);
             
-            // Animación de entrada
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
-            
-            // Animación de salida
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
-            }, 3500); // Desaparece a los 3.5 segundos
+            }, 3500); 
         }
 
         // ==========================================
-        // UTILIDADES Y ARRANQUE
+        // FUNCIONES BÁSICAS
         // ==========================================
         function hoyString() {
             const d = new Date();
@@ -151,14 +163,11 @@
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
                 if (!res.ok) throw new Error("Fallo de red");
-                
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            } catch (e) { 
-                mostrarToast("❌ Error conectando con la base de datos.", "error"); 
-            }
+            } catch (e) { mostrarToast("❌ Error conectando con la base de datos.", "error"); }
         }
 
         async function iniciarSesion() {
@@ -169,28 +178,17 @@
             const id = document.getElementById('selectorUsuario').value;
             const pinInput = document.getElementById('pinSecreto').value;
             
-            if(!id || !pinInput) {
-                errorMsg.innerText = "⚠️ Faltan datos.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
+            if(!id || !pinInput) { errorMsg.innerText = "⚠️ Faltan datos."; errorMsg.classList.remove('hidden'); return; }
 
-            const textoOriginal = btn.innerText;
-            btn.innerText = "Comprobando...";
-            btn.disabled = true;
+            btn.innerText = "Comprobando..."; btn.disabled = true;
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { 
-                    headers, cache: 'no-store'
-                });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { headers, cache: 'no-store' });
                 const data = await res.json();
 
                 if (!data || data.length === 0) {
-                    errorMsg.innerText = "❌ Usuario no encontrado.";
-                    errorMsg.classList.remove('hidden');
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    return;
+                    errorMsg.innerText = "❌ Usuario no encontrado."; errorMsg.classList.remove('hidden');
+                    btn.innerText = "Entrar"; btn.disabled = false; return;
                 }
 
                 const usuarioDDBB = data[0];
@@ -198,11 +196,8 @@
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
                 if (pinSoloNumerosDB !== pinSoloNumerosWeb) {
-                    errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`;
-                    errorMsg.classList.remove('hidden');
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    return;
+                    errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`; errorMsg.classList.remove('hidden');
+                    btn.innerText = "Entrar"; btn.disabled = false; return;
                 }
                 
                 usuarioActual = usuarioDDBB;
@@ -219,17 +214,83 @@
                     mostrarToast(`👋 Bienvenido, ${usuarioActual.nombre.split(" ")[0]}`, "exito");
                 }
             } catch (error) {
-                errorMsg.innerText = "📡 Error de red.";
-                errorMsg.classList.remove('hidden');
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
+                errorMsg.innerText = "📡 Error de red."; errorMsg.classList.remove('hidden');
+                btn.innerText = "Entrar"; btn.disabled = false;
             }
         }
 
         function cerrarSesion() { location.reload(); }
 
         // ==========================================
-        // FUNCIONES SÚPER JEFE (ADMIN)
+        // LA CARTERA VIRTUAL (NUEVO)
+        // ==========================================
+        async function abrirCartera() {
+            const modal = document.getElementById('modalCartera');
+            const contenido = modal.querySelector('div');
+            const lista = document.getElementById('listaMovimientos');
+            
+            // Refrescar el saldo actual de la base de datos por si hubo cambios
+            const resSaldo = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}&select=saldo`, { headers, cache: 'no-store' });
+            const dataSaldo = await resSaldo.json();
+            usuarioActual.saldo = dataSaldo[0].saldo;
+            document.getElementById('carteraSaldoTotal').innerText = `${usuarioActual.saldo}€`;
+
+            // Animación de entrada
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                contenido.classList.remove('translate-y-full');
+            }, 10);
+
+            lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 animate-pulse">Consultando el banco...</p>';
+            
+            try {
+                // Traer historial (invertido para que lo más nuevo salga arriba si no hay columna de fecha)
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo?usuario_id=eq.${usuarioActual.id}`, { headers, cache: 'no-store' });
+                let movs = await res.json();
+                movs.reverse(); // Lo más reciente primero
+                
+                lista.innerHTML = '';
+                if(movs.length === 0) {
+                    lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 italic">Todavía no has gastado ni recargado nada.</p>';
+                    return;
+                }
+
+                movs.forEach(m => {
+                    const esPositivo = m.cantidad > 0;
+                    const colorTexto = esPositivo ? 'text-emerald-600' : 'text-rose-500';
+                    const colorFondo = esPositivo ? 'bg-emerald-50' : 'bg-rose-50';
+                    const icono = esPositivo ? '🟢' : '🔴';
+                    const signo = esPositivo ? '+' : '';
+                    
+                    lista.innerHTML += `
+                        <div class="flex justify-between items-center p-4 rounded-2xl ${colorFondo} border border-slate-100/50 shadow-sm">
+                            <div class="flex items-center gap-3 truncate pr-2">
+                                <span class="text-lg">${icono}</span>
+                                <span class="font-bold text-sm text-slate-700 truncate">${m.concepto}</span>
+                            </div>
+                            <span class="font-black text-lg ${colorTexto} whitespace-nowrap">${signo}${m.cantidad}€</span>
+                        </div>
+                    `;
+                });
+            } catch(e) {
+                lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">Error al cargar el historial.</p>';
+            }
+        }
+
+        function cerrarCartera() {
+            const modal = document.getElementById('modalCartera');
+            const contenido = modal.querySelector('div');
+            
+            modal.classList.add('opacity-0');
+            contenido.classList.add('translate-y-full');
+            
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+
+        // ==========================================
+        // FUNCIONES SÚPER JEFE (ADMIN) CON REGISTRO DE MOVIMIENTOS
         // ==========================================
         async function añadirSaldo(userId, name) {
             const extra = prompt(`¿Cuánto dinero le quieres recargar a ${name}?\n(Escribe solo el número, ej: 5)`);
@@ -241,15 +302,23 @@
                 const saldoActual = data[0].saldo || 0;
                 const nuevoSaldo = saldoActual + parseFloat(extra);
 
+                // 1. Actualizar saldo
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, {
                     method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
                 });
 
+                // 2. Registrar movimiento en la tabla
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
+                    method: 'POST', headers, body: JSON.stringify({ 
+                        usuario_id: userId, 
+                        cantidad: parseFloat(extra), 
+                        concepto: 'Recarga manual de Yisu' 
+                    })
+                });
+
                 mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
                 cargarPanelJefe(); 
-            } catch(e) { 
-                mostrarToast("❌ Error al recargar saldo.", "error"); 
-            }
+            } catch(e) { mostrarToast("❌ Error al recargar saldo.", "error"); }
         }
 
         async function eliminarReserva(resId, userId, viajeId) {
@@ -270,46 +339,40 @@
                     method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 })
                 });
 
+                // Registrar reembolso en historial
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
+                    method: 'POST', headers, body: JSON.stringify({ 
+                        usuario_id: userId, 
+                        cantidad: 1, 
+                        concepto: 'Reembolso por viaje cancelado' 
+                    })
+                });
+
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
-            } catch(e) { 
-                mostrarToast("❌ Error al eliminar pasajero.", "error"); 
-            }
+            } catch(e) { mostrarToast("❌ Error al eliminar pasajero.", "error"); }
         }
 
+        // Resto de funciones Admin idénticas...
         async function moverReserva(resId, viajeId, asientoActual) {
             try {
                 const asientosPosibles = ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'];
-                
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeId}&select=asiento`, { headers, cache: 'no-store' });
                 const reservas = await res.json();
                 const ocupados = reservas.map(r => r.asiento);
-                
                 const libres = asientosPosibles.filter(a => !ocupados.includes(a));
                 
-                if(libres.length === 0) {
-                    mostrarToast("❌ El coche está lleno. No hay sitios libres.", "error"); 
-                    return;
-                }
+                if(libres.length === 0) { mostrarToast("❌ El coche está lleno.", "error"); return; }
 
-                const nuevoAsiento = prompt(`El usuario está en: ${asientoActual}\n\nLos asientos LIBRES son:\n${libres.join(", ")}\n\nEscribe exactamente el nombre del nuevo asiento:`).toLowerCase().trim();
+                const nuevoAsiento = prompt(`El usuario está en: ${asientoActual}\nLos libres son: ${libres.join(", ")}\nEscribe el nuevo asiento:`).toLowerCase().trim();
                 if(!nuevoAsiento) return; 
 
-                if(!libres.includes(nuevoAsiento)) {
-                    mostrarToast("❌ Nombre incorrecto o asiento ocupado.", "error"); 
-                    return;
-                }
+                if(!libres.includes(nuevoAsiento)) { mostrarToast("❌ Nombre incorrecto.", "error"); return; }
 
-                await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, {
-                    method: 'PATCH', headers, body: JSON.stringify({ asiento: nuevoAsiento })
-                });
-
+                await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'PATCH', headers, body: JSON.stringify({ asiento: nuevoAsiento }) });
                 mostrarToast("🔄 Pasajero movido de sitio.", "exito");
                 cargarPanelJefe();
-
-            } catch(e) { 
-                mostrarToast("❌ Error al mover asiento.", "error"); 
-            }
+            } catch(e) { mostrarToast("❌ Error al mover asiento.", "error"); }
         }
 
         async function cargarPanelJefe() {
@@ -327,17 +390,11 @@
             listaSaldos.innerHTML = '';
             usuariosGlobal.forEach(u => {
                 if(u.id === usuarioActual.id) return; 
-                
                 let colorSaldo = u.saldo <= 0 ? 'text-rose-500' : (u.saldo === 1 ? 'text-orange-500' : 'text-slate-500');
                 listaSaldos.innerHTML += `
                     <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                        <div class="truncate mr-2">
-                            <p class="font-bold text-sm truncate">${u.nombre.split(" ")[0]}</p>
-                            <p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p>
-                        </div>
-                        <button onclick="añadirSaldo('${u.id}', '${u.nombre}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 transition-all">
-                            + €
-                        </button>
+                        <div class="truncate mr-2"><p class="font-bold text-sm truncate">${u.nombre.split(" ")[0]}</p><p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p></div>
+                        <button onclick="añadirSaldo('${u.id}', '${u.nombre}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 transition-all">+ €</button>
                     </div>`;
             });
 
@@ -373,13 +430,8 @@
                 listaViajes.innerHTML += `
                     <div class="p-4 border-2 border-slate-200 rounded-2xl shadow-sm bg-white">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
-                            <div>
-                                <p class="font-black capitalize text-lg text-slate-700">${fechaLimpia}</p>
-                                <p class="text-xs font-bold text-slate-400 mt-1">Plazas libres: ${v.plazas_disponibles} | ${v.estado.toUpperCase()}</p>
-                            </div>
-                            <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} px-3 py-2 rounded-lg font-bold text-xs">
-                                ${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}
-                            </button>
+                            <div><p class="font-black capitalize text-lg text-slate-700">${fechaLimpia}</p><p class="text-xs font-bold text-slate-400 mt-1">Plazas libres: ${v.plazas_disponibles} | ${v.estado.toUpperCase()}</p></div>
+                            <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} px-3 py-2 rounded-lg font-bold text-xs">${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}</button>
                         </div>
                         <div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Pasajeros:</div>
                         ${htmlAsientos}
@@ -390,9 +442,7 @@
         async function crearDiaManual() {
             const nuevaFecha = document.getElementById('nuevoDiaInput').value;
             if(nuevaFecha) {
-                await fetch(`${SUPABASE_URL}/rest/v1/viajes`, {
-                    method: 'POST', headers, body: JSON.stringify({ fecha: nuevaFecha, estado: 'abierto', plazas_disponibles: 4 })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/viajes`, { method: 'POST', headers, body: JSON.stringify({ fecha: nuevaFecha, estado: 'abierto', plazas_disponibles: 4 }) });
                 document.getElementById('nuevoDiaInput').value = ''; 
                 mostrarToast("📅 Nuevo día añadido.", "exito");
                 cargarPanelJefe(); 
@@ -400,15 +450,13 @@
         }
 
         async function cambiarEstadoViaje(viaje_id, nuevoEstado) {
-            await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viaje_id}`, {
-                method: 'PATCH', headers, body: JSON.stringify({ estado: nuevoEstado })
-            });
+            await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viaje_id}`, { method: 'PATCH', headers, body: JSON.stringify({ estado: nuevoEstado }) });
             mostrarToast(`🔄 Estado cambiado a: ${nuevoEstado}`, "exito");
             cargarPanelJefe();
         }
 
         // ==========================================
-        // FUNCIONES DE AMIGOS (EL COCHE)
+        // FUNCIONES DE AMIGOS CON REGISTRO DE MOVIMIENTOS
         // ==========================================
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
@@ -441,8 +489,7 @@
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
                 btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
-                btn.disabled = false; 
-                btn.querySelector('.libre-txt').innerText = "Libre";
+                btn.disabled = false; btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
             const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&select=*`, { headers, cache: 'no-store' });
@@ -471,8 +518,7 @@
                     const btn = document.getElementById(`asiento_${id}`);
                     if (!btn.disabled) { 
                         btn.className = `bg-slate-50 border-2 border-slate-200 text-slate-400 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-not-allowed opacity-60`;
-                        btn.disabled = true;
-                        btn.querySelector('.libre-txt').innerText = "Bloqueado";
+                        btn.disabled = true; btn.querySelector('.libre-txt').innerText = "Bloqueado";
                     }
                 });
             }
@@ -495,10 +541,11 @@
                 const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}&select=*`, { headers, cache: 'no-store' });
                 const checkData = await resCheck.json();
                 
-                if (checkData && checkData.length > 0) {
-                    mostrarToast("⚠️ Ya tienes un asiento reservado para este día.", "aviso");
-                    return; 
-                }
+                if (checkData && checkData.length > 0) { mostrarToast("⚠️ Ya tienes un asiento reservado para este día.", "aviso"); return; }
+
+                // Obtener info del viaje para el texto del ticket
+                const btnDia = document.getElementById(`btn_dia_${viajeSeleccionado}`);
+                const textoDia = btnDia ? btnDia.innerText.replace(/\n/g, ' ') : 'ese día';
 
                 const resReserva = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
                     method: 'POST', headers, body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) 
@@ -508,8 +555,19 @@
 
                 const saldoOriginal = usuarioActual.saldo;
                 const nuevoSaldo = saldoOriginal - 1;
+                
+                // 1. Actualizar cuenta
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
+
+                // 2. Registrar movimiento en la tabla
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
+                    method: 'POST', headers, body: JSON.stringify({ 
+                        usuario_id: usuarioActual.id, 
+                        cantidad: -1, 
+                        concepto: `Viaje FCom - ${textoDia}` 
+                    })
+                });
 
                 const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                 const dataViaje = await resViaje.json();
@@ -521,8 +579,6 @@
                 cargarCoche(); 
 
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
-                const btnDia = document.getElementById(`btn_dia_${viajeSeleccionado}`);
-                const textoDia = btnDia ? btnDia.innerText.replace(/\n/g, ' ') : 'ese día';
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
                 
                 if (saldoOriginal === 1) {
