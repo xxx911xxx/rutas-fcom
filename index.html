@@ -116,10 +116,10 @@
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
-        // 1. ARRANCAR WEB CON ANTI-CACHÉ
+        // 1. ARRANCAR WEB (Arreglado el error de conexión)
         async function init() {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*&t=${Date.now()}`, { headers });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
@@ -127,7 +127,7 @@
             } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
-        // 2. SISTEMA DE LOGIN DESTRUCTOR DE FANTASMAS
+        // 2. SISTEMA DE LOGIN (Destructor de espacios invisibles)
         async function iniciarSesion() {
             const errorMsg = document.getElementById('errorLogin');
             const btn = document.querySelector('#pantallaLogin button');
@@ -154,13 +154,12 @@
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Forzamos a no leer caché añadiendo Date.now()
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*&t=${Date.now()}`, { 
-                    headers: headers
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { 
+                    headers, cache: 'no-store'
                 });
                 
                 const data = await res.json();
-                await new Promise(r => setTimeout(r, 400));
+                await new Promise(r => setTimeout(r, 400)); // Freno visual de 0.4s
 
                 if (data.error || data.length === 0) {
                     errorMsg.innerText = "❌ Error: Usuario no encontrado.";
@@ -171,7 +170,7 @@
 
                 const usuarioDDBB = data[0];
 
-                // LA MAGIA AQUÍ: replace(/\D/g, '') elimina CUALQUIER carácter que no sea un número (0-9)
+                // Limpiamos espacios invisibles para comparar siempre números puros
                 const pinSoloNumerosDB = String(usuarioDDBB.pin || "").replace(/\D/g, '');
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
@@ -214,7 +213,7 @@
 
         // 3. FUNCIONES MODO JEFE
         async function cargarPanelJefe() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc&t=${Date.now()}`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
             const viajes = await res.json();
             const lista = document.getElementById('listaViajesAdmin');
             lista.innerHTML = '';
@@ -270,7 +269,7 @@
 
         // 4. FUNCIONES MODO AMIGOS (EL COCHE)
         async function cargarViajesAmigos() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc&t=${Date.now()}`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
             const viajes = await res.json();
             const cal = document.getElementById('calendarioViajes');
             cal.innerHTML = '';
@@ -325,7 +324,7 @@
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&t=${Date.now()}`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}`, { headers, cache: 'no-store' });
             const reservas = await res.json();
 
             reservas.forEach(r => {
