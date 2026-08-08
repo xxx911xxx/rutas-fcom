@@ -54,7 +54,7 @@
         
         <!-- CALENDARIO INTERACTIVO -->
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
-            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
+            <!-- Las tarjetas de los días aparecerán aquí -->
         </div>
 
         <!-- MAPA DEL COCHE -->
@@ -127,10 +127,12 @@
             } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
-        // 2. SISTEMA DE LOGIN MEJORADO
+        // 2. SISTEMA DE LOGIN BLINDADO
         async function iniciarSesion() {
             const id = document.getElementById('selectorUsuario').value;
-            const pin = document.getElementById('pinSecreto').value;
+            const pinRaw = document.getElementById('pinSecreto').value;
+            const pin = pinRaw.trim(); // TRUCO 1: Borra espacios invisibles
+            
             const btn = document.querySelector('#pantallaLogin button');
             const errorMsg = document.getElementById('errorLogin');
             
@@ -139,19 +141,34 @@
             errorMsg.classList.add('hidden');
             const textoOriginal = btn.innerText;
             btn.innerText = "Comprobando...";
+            
+            // TRUCO 2: Apagamos el botón visualmente para que sepas que está pensando
             btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { headers });
+                // TRUCO 3: "cache: 'no-store'" obliga a no usar la memoria de errores pasados
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { 
+                    headers: headers,
+                    cache: 'no-store'
+                });
+                
                 const data = await res.json();
 
                 if (data.length === 0) {
                     errorMsg.classList.remove('hidden');
                     btn.innerText = textoOriginal;
                     btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
                 } else {
                     usuarioActual = data[0];
                     document.getElementById('pantallaLogin').classList.add('hidden');
+                    
+                    // Reseteamos el botón y el campo del PIN por si vuelven a cerrar sesión
+                    btn.innerText = textoOriginal;
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('pinSecreto').value = ''; 
                     
                     if (usuarioActual.es_admin) {
                         document.getElementById('pantallaAdmin').classList.remove('hidden');
@@ -162,9 +179,10 @@
                     }
                 }
             } catch (error) {
-                alert("Error de conexión");
+                alert("Error de conexión. Comprueba tu internet.");
                 btn.innerText = textoOriginal;
                 btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
