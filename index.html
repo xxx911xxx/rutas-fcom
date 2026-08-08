@@ -23,23 +23,34 @@
         <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto.</p>
     </div>
 
-    <!-- PANTALLA 2: MODO JEFE (ADMIN) -->
-    <div id="pantallaAdmin" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl p-8 mt-10 hidden">
+    <!-- PANTALLA 2: MODO SÚPER JEFE (ADMIN) -->
+    <div id="pantallaAdmin" class="max-w-md mx-auto bg-slate-50 rounded-3xl shadow-xl p-6 mt-10 hidden border-4 border-blue-200">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-2xl font-bold text-blue-600">👑 Panel Jefe</h1>
-            <button onclick="cerrarSesion()" class="text-slate-500 underline">Salir</button>
+            <h1 class="text-2xl font-black text-blue-700">👑 Súper Jefe</h1>
+            <button onclick="cerrarSesion()" class="text-slate-500 underline font-bold">Salir</button>
         </div>
         
-        <!-- CREADOR DE DÍAS -->
-        <div class="mb-8 p-5 bg-blue-50 rounded-2xl border-2 border-blue-100">
-            <h3 class="font-bold text-blue-800 mb-3">➕ Añadir nuevo día lectivo:</h3>
-            <div class="flex gap-3">
-                <input type="date" id="nuevoDiaInput" class="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 font-medium">
-                <button onclick="crearDiaManual()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-transform active:scale-95">Añadir</button>
+        <!-- SECCIÓN 1: SALDOS -->
+        <div class="mb-6">
+            <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">💰 Cuentas y Bizums</h2>
+            <div id="listaSaldosAdmin" class="grid grid-cols-2 gap-2">
+                <!-- Se rellena con JS -->
             </div>
         </div>
 
-        <h2 class="font-bold mb-4">Días creados (Hoy en adelante):</h2>
+        <hr class="border-slate-300 mb-6">
+
+        <!-- SECCIÓN 2: VIAJES -->
+        <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">📅 Gestión de Viajes</h2>
+        
+        <div class="mb-6 p-4 bg-blue-100 rounded-2xl">
+            <h3 class="font-bold text-blue-900 mb-2 text-sm">➕ Añadir nuevo día lectivo:</h3>
+            <div class="flex gap-2">
+                <input type="date" id="nuevoDiaInput" class="w-full border-2 border-white rounded-xl p-2 outline-none font-medium bg-white">
+                <button onclick="crearDiaManual()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 rounded-xl shadow active:scale-95 transition-transform">Crear</button>
+            </div>
+        </div>
+
         <div id="listaViajesAdmin" class="space-y-4"></div>
     </div>
 
@@ -51,35 +62,27 @@
         </div>
         
         <label class="font-bold text-slate-700 mb-2 block">1. Selecciona el día:</label>
-        
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6"></div>
 
         <div id="mapaCoche" class="hidden bg-slate-50 rounded-3xl p-6 border-4 border-slate-200 relative">
             <div class="text-center font-bold text-slate-400 mb-4">PARTE DELANTERA</div>
-            
             <div class="grid grid-cols-2 gap-6 mb-6">
                 <div class="bg-slate-800 text-white p-4 rounded-2xl text-center font-bold flex flex-col justify-center opacity-80 cursor-not-allowed h-24">
-                    <span>Volante 🚘</span>
-                    <span class="text-xs font-normal">Yisu (Tú)</span>
+                    <span>Volante 🚘</span><span class="text-xs font-normal">Yisu (Tú)</span>
                 </div>
                 <button id="asiento_copiloto" onclick="reservarSitio('copiloto')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-4 rounded-2xl text-center font-bold h-24 shadow-sm">
-                    <span>Copiloto</span>
-                    <span class="block text-xs font-normal mt-1 libre-txt">Libre</span>
+                    <span>Copiloto</span><span class="block text-xs font-normal mt-1 libre-txt">Libre</span>
                 </button>
             </div>
-
             <div class="grid grid-cols-3 gap-2">
                 <button id="asiento_atras_izq" onclick="reservarSitio('atras_izq')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
-                    <span>Izq.</span>
-                    <span class="block text-xs font-normal libre-txt">Libre</span>
+                    <span>Izq.</span><span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
                 <button id="asiento_atras_cen" onclick="reservarSitio('atras_cen')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
-                    <span>Medio</span>
-                    <span class="block text-xs font-normal libre-txt">Libre</span>
+                    <span>Medio</span><span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
                 <button id="asiento_atras_der" onclick="reservarSitio('atras_der')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
-                    <span>Der.</span>
-                    <span class="block text-xs font-normal libre-txt">Libre</span>
+                    <span>Der.</span><span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
             </div>
         </div>
@@ -109,15 +112,11 @@
         async function init() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
-                if (!res.ok) throw new Error("Fallo de red");
-                
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            } catch (e) { 
-                alert("Error conectando con la base de datos."); 
-            }
+            } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
         async function iniciarSesion() {
@@ -127,29 +126,18 @@
 
             const id = document.getElementById('selectorUsuario').value;
             const pinInput = document.getElementById('pinSecreto').value;
-            
-            if(!id || !pinInput) {
-                errorMsg.innerText = "⚠️ Faltan datos.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
+            if(!id || !pinInput) { errorMsg.innerText = "⚠️ Faltan datos."; errorMsg.classList.remove('hidden'); return; }
 
             const textoOriginal = btn.innerText;
-            btn.innerText = "Comprobando...";
-            btn.disabled = true;
+            btn.innerText = "Comprobando..."; btn.disabled = true;
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { 
-                    headers, cache: 'no-store'
-                });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { headers, cache: 'no-store' });
                 const data = await res.json();
 
                 if (!data || data.length === 0) {
-                    errorMsg.innerText = "❌ Usuario no encontrado.";
-                    errorMsg.classList.remove('hidden');
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    return;
+                    errorMsg.innerText = "❌ Usuario no encontrado."; errorMsg.classList.remove('hidden');
+                    btn.innerText = textoOriginal; btn.disabled = false; return;
                 }
 
                 const usuarioDDBB = data[0];
@@ -157,11 +145,8 @@
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
                 if (pinSoloNumerosDB !== pinSoloNumerosWeb) {
-                    errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`;
-                    errorMsg.classList.remove('hidden');
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    return;
+                    errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`; errorMsg.classList.remove('hidden');
+                    btn.innerText = textoOriginal; btn.disabled = false; return;
                 }
                 
                 usuarioActual = usuarioDDBB;
@@ -176,30 +161,173 @@
                     cargarViajesAmigos();
                 }
             } catch (error) {
-                errorMsg.innerText = "📡 Error de red.";
-                errorMsg.classList.remove('hidden');
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
+                errorMsg.innerText = "📡 Error de red."; errorMsg.classList.remove('hidden');
+                btn.innerText = textoOriginal; btn.disabled = false;
             }
         }
 
         function cerrarSesion() { location.reload(); }
 
+        // ==========================================
+        // FUNCIONES SÚPER JEFE (NUEVAS Y MEJORADAS)
+        // ==========================================
+        
+        async function añadirSaldo(userId, name) {
+            const extra = prompt(`¿Cuánto dinero le quieres recargar a ${name}?\n(Escribe solo el número, ej: 5)`);
+            if(!extra || isNaN(extra) || extra <= 0) return;
+            
+            try {
+                // Sacar saldo actual real de la BD
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
+                const data = await res.json();
+                const saldoActual = data[0].saldo || 0;
+                const nuevoSaldo = saldoActual + parseFloat(extra);
+
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
+                });
+
+                alert(`✅ Perfecto. ${name} ahora tiene ${nuevoSaldo}€ de saldo.`);
+                cargarPanelJefe(); // Recargar visualmente
+            } catch(e) { alert("Error al recargar saldo."); }
+        }
+
+        async function eliminarReserva(resId, userId, viajeId) {
+            if(!confirm("⚠️ ¿Estás seguro de quitar a este usuario?\nSe borrará su asiento, se liberará la plaza y se le devolverá su 1€ al saldo automáticamente.")) return;
+
+            try {
+                // 1. Borrar reserva
+                await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'DELETE', headers });
+                
+                // 2. Devolver 1€
+                const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
+                const dataU = await resU.json();
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 })
+                });
+
+                // 3. Devolver 1 plaza al viaje
+                const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
+                const dataV = await resV.json();
+                await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 })
+                });
+
+                alert("🗑️ Pasajero eliminado y reembolsado correctamente.");
+                cargarPanelJefe();
+            } catch(e) { alert("Error al eliminar pasajero."); }
+        }
+
+        async function moverReserva(resId, viajeId, asientoActual) {
+            try {
+                const asientosPosibles = ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'];
+                
+                // Mirar cuáles están ocupados
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeId}&select=asiento`, { headers, cache: 'no-store' });
+                const reservas = await res.json();
+                const ocupados = reservas.map(r => r.asiento);
+                
+                // Filtrar libres
+                const libres = asientosPosibles.filter(a => !ocupados.includes(a));
+                
+                if(libres.length === 0) {
+                    alert("❌ El coche está lleno. No hay sitios libres para moverle."); return;
+                }
+
+                const nuevoAsiento = prompt(`El usuario está en: ${asientoActual}\n\nLos asientos LIBRES son:\n${libres.join(", ")}\n\nEscribe exactamente el nombre del nuevo asiento donde quieres ponerle:`).toLowerCase().trim();
+                
+                if(!nuevoAsiento) return; // Canceló
+
+                if(!libres.includes(nuevoAsiento)) {
+                    alert("❌ Nombre de asiento incorrecto o ya está ocupado. Escríbelo tal cual sale en la lista."); return;
+                }
+
+                // Hacer el cambio
+                await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ asiento: nuevoAsiento })
+                });
+
+                alert("🔄 Pasajero movido de sitio correctamente.");
+                cargarPanelJefe();
+
+            } catch(e) { alert("Error al intentar mover el asiento."); }
+        }
+
         async function cargarPanelJefe() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
-            const viajes = await res.json();
-            const lista = document.getElementById('listaViajesAdmin');
-            lista.innerHTML = '';
-            viajes.forEach(v => {
-                const fechaLimpia = new Date(v.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'long'});
-                const esAbierto = v.estado === 'abierto';
-                const colorBtn = esAbierto ? 'bg-rose-500' : 'bg-emerald-500';
-                lista.innerHTML += `
-                    <div class="p-4 border-2 border-slate-100 rounded-xl flex justify-between items-center shadow-sm">
-                        <div><p class="font-bold capitalize">${fechaLimpia}</p><p class="text-sm text-slate-500">Estado: ${v.estado.toUpperCase()}</p><p class="text-xs font-bold text-slate-400 mt-1">Plazas: ${v.plazas_disponibles}</p></div>
-                        <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} text-white px-4 py-2 rounded-lg font-bold text-sm">
-                            ${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}
+            // Traemos TODOS los datos de golpe para armar el súper panel
+            const [resViajes, resReservas, resUsuarios] = await Promise.all([
+                fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' }),
+                fetch(`${SUPABASE_URL}/rest/v1/reservas`, { headers, cache: 'no-store' }),
+                fetch(`${SUPABASE_URL}/rest/v1/usuarios?order=nombre.asc`, { headers, cache: 'no-store' })
+            ]);
+            
+            const viajes = await resViajes.json();
+            const todasReservas = await resReservas.json();
+            usuariosGlobal = await resUsuarios.json();
+
+            // PINTAR SALDOS
+            const listaSaldos = document.getElementById('listaSaldosAdmin');
+            listaSaldos.innerHTML = '';
+            usuariosGlobal.forEach(u => {
+                if(u.id === usuarioActual.id) return; // No te pintas a ti mismo
+                
+                let colorSaldo = u.saldo <= 0 ? 'text-rose-500' : (u.saldo === 1 ? 'text-orange-500' : 'text-slate-500');
+                listaSaldos.innerHTML += `
+                    <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="truncate mr-2">
+                            <p class="font-bold text-sm truncate">${u.nombre.split(" ")[0]}</p>
+                            <p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p>
+                        </div>
+                        <button onclick="añadirSaldo('${u.id}', '${u.nombre}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 transition-all">
+                            + €
                         </button>
+                    </div>`;
+            });
+
+            // PINTAR VIAJES Y SUS PASAJEROS
+            const listaViajes = document.getElementById('listaViajesAdmin');
+            listaViajes.innerHTML = '';
+            viajes.forEach(v => {
+                const fechaLimpia = new Date(v.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'short'});
+                const esAbierto = v.estado === 'abierto';
+                const colorBtn = esAbierto ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700';
+                
+                // Encontrar reservas de este viaje concreto
+                const resViaje = todasReservas.filter(r => r.viaje_id === v.id);
+                let htmlAsientos = '';
+                
+                if(resViaje.length === 0) {
+                    htmlAsientos = '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg">Coche vacío</p>';
+                } else {
+                    htmlAsientos = '<div class="space-y-2 mt-2">';
+                    resViaje.forEach(r => {
+                        const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
+                        const nombreUsr = usr ? usr.nombre.split(" ")[0] : 'Desconocido';
+                        htmlAsientos += `
+                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100 text-sm">
+                                <span class="font-bold text-slate-600 truncate w-32">💺 ${r.asiento.replace('atras_','')} <span class="font-normal">(${nombreUsr})</span></span>
+                                <div class="flex gap-2">
+                                    <button onclick="moverReserva('${r.id}', '${v.id}', '${r.asiento}')" class="text-blue-500 bg-blue-50 px-2 py-1 rounded font-bold hover:bg-blue-100 text-xs">Mover</button>
+                                    <button onclick="eliminarReserva('${r.id}', '${r.usuario_id}', '${v.id}')" class="text-rose-500 bg-rose-50 px-2 py-1 rounded font-bold hover:bg-rose-100 text-xs">Echar</button>
+                                </div>
+                            </div>`;
+                    });
+                    htmlAsientos += '</div>';
+                }
+
+                listaViajes.innerHTML += `
+                    <div class="p-4 border-2 border-slate-200 rounded-2xl shadow-sm bg-white">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+                            <div>
+                                <p class="font-black capitalize text-lg text-slate-700">${fechaLimpia}</p>
+                                <p class="text-xs font-bold text-slate-400 mt-1">Plazas libres: ${v.plazas_disponibles} | ${v.estado.toUpperCase()}</p>
+                            </div>
+                            <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} px-3 py-2 rounded-lg font-bold text-xs">
+                                ${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}
+                            </button>
+                        </div>
+                        <div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Pasajeros:</div>
+                        ${htmlAsientos}
                     </div>`;
             });
         }
@@ -222,6 +350,9 @@
             cargarPanelJefe();
         }
 
+        // ==========================================
+        // FUNCIONES DE AMIGOS (EL COCHE)
+        // ==========================================
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
             const viajes = await res.json();
@@ -294,17 +425,15 @@
         async function reservarSitio(asiento) {
             if(!viajeSeleccionado) return;
 
-            // BLOQUEO DE SEGURIDAD 1: ¿Tienes saldo?
             if (usuarioActual.saldo <= 0) {
                 alert("🚫 ¡Vaya! No te queda saldo (0€). Pulsa 'Aceptar' para avisar a Yisu por WhatsApp y recargar tu cuenta.");
                 const miNombre = usuarioActual.nombre.split(" ")[0];
                 const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Me he quedado a 0€ de saldo y necesito recargar para poder reservar sitio en el coche. 💸`;
                 window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank');
-                return; // Cortamos en seco, no hay reserva.
+                return; 
             }
 
             try {
-                // Comprobación de seguridad en Base de Datos
                 const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}&select=*`, { headers, cache: 'no-store' });
                 const checkData = await resCheck.json();
                 
@@ -313,7 +442,6 @@
                     return; 
                 }
 
-                // Guardar reserva
                 const resReserva = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
                     method: 'POST', 
                     headers, 
@@ -326,38 +454,28 @@
                     }) 
                 });
 
-                if (!resReserva.ok) {
-                    alert("❌ Error al guardar la reserva en la base de datos.");
-                    return;
-                }
+                if (!resReserva.ok) { alert("❌ Error al guardar la reserva."); return; }
 
-                // Guardamos el saldo que tenía ANTES de pagar
                 const saldoOriginal = usuarioActual.saldo;
-
-                // Cobrar 1€
                 const nuevoSaldo = saldoOriginal - 1;
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, {
                     method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
                 });
                 usuarioActual.saldo = nuevoSaldo; 
 
-                // Restar 1 plaza
                 const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                 const dataViaje = await resViaje.json();
                 if(dataViaje && dataViaje.length > 0) {
-                    const plazasActuales = dataViaje[0].plazas_disponibles;
                     await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}`, {
-                        method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: plazasActuales - 1 })
+                        method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataViaje[0].plazas_disponibles - 1 })
                     });
                 }
 
-                // Éxito visual
                 document.getElementById('mensajeReserva').classList.remove('hidden');
                 setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
                 
                 cargarCoche(); 
 
-                // MAGIA WHATSAPP RESERVA NORMAL
                 const nombresAsientos = {
                     'copiloto': 'Copiloto 🚘',
                     'atras_izq': 'Atrás Izquierda 👈',
@@ -371,12 +489,10 @@
 
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
                 
-                // BLOQUEO DE SEGURIDAD 2: El aviso del último euro
                 if (saldoOriginal === 1) {
                     alert("⚠️ ¡Aviso! Acabas de gastar tu último euro. Te quedas a 0€ de saldo. Recuerda hablar con Yisu para recargar de cara al próximo viaje.");
                 }
 
-                // Abrir WhatsApp con el mensaje de confirmación de plaza
                 window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank');
                 
             } catch(e) { 
