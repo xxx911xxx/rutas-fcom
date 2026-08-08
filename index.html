@@ -29,7 +29,7 @@
             <h1 class="text-2xl font-bold text-blue-600">👑 Panel Jefe</h1>
             <button onclick="cerrarSesion()" class="text-slate-500 underline">Salir</button>
         </div>
-        <h2 class="font-bold mb-4">Días creados en la Base de Datos:</h2>
+        <h2 class="font-bold mb-4">Días lectivos creados:</h2>
         <div id="listaViajesAdmin" class="space-y-4"></div>
     </div>
 
@@ -41,9 +41,10 @@
         </div>
         
         <label class="font-bold text-slate-700 mb-2 block">1. Selecciona el día:</label>
-      <!-- NUEVO CALENDARIO INTERACTIVO -->
+        
+        <!-- CALENDARIO INTERACTIVO -->
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
-            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
+            <!-- Las tarjetas se generan solas -->
         </div>
 
         <!-- MAPA DEL COCHE -->
@@ -51,31 +52,31 @@
             <div class="text-center font-bold text-slate-400 mb-4">PARTE DELANTERA</div>
             
             <div class="grid grid-cols-2 gap-6 mb-6">
-                <!-- Conductor (Tú) -->
+                <!-- Conductor -->
                 <div class="bg-slate-800 text-white p-4 rounded-2xl text-center font-bold flex flex-col justify-center opacity-80 cursor-not-allowed h-24">
                     <span>Volante 🚘</span>
                     <span class="text-xs font-normal">Yisu (Tú)</span>
                 </div>
                 <!-- Copiloto -->
-                <button id="asiento_copiloto" onclick="reservarSitio('copiloto')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-4 rounded-2xl text-center font-bold h-24">
+                <button id="asiento_copiloto" onclick="reservarSitio('copiloto')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-4 rounded-2xl text-center font-bold h-24 shadow-sm">
                     <span>Copiloto</span>
                     <span class="block text-xs font-normal mt-1 libre-txt">Libre</span>
                 </button>
             </div>
 
             <div class="grid grid-cols-3 gap-2">
-                <!-- Atrás Izquierda -->
-                <button id="asiento_atras_izq" onclick="reservarSitio('atras_izq')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center">
+                <!-- Atrás Izq -->
+                <button id="asiento_atras_izq" onclick="reservarSitio('atras_izq')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
                     <span>Izq.</span>
                     <span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
-                <!-- Atrás Centro -->
-                <button id="asiento_atras_cen" onclick="reservarSitio('atras_cen')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center">
+                <!-- Atrás Medio -->
+                <button id="asiento_atras_cen" onclick="reservarSitio('atras_cen')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
                     <span>Medio</span>
                     <span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
-                <!-- Atrás Derecha -->
-                <button id="asiento_atras_der" onclick="reservarSitio('atras_der')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center">
+                <!-- Atrás Der -->
+                <button id="asiento_atras_der" onclick="reservarSitio('atras_der')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center shadow-sm">
                     <span>Der.</span>
                     <span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
@@ -87,7 +88,7 @@
     <script>
         // ======= CONFIGURACIÓN SUPABASE =======
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_pA_FcTBC-G4c2dJiFydsuw_c45SIiAA"; // Tu clave está aquí
+        const SUPABASE_KEY = "sb_publishable_pA_FcTBC-G4c2dJiFydsuw_c45SIiAA"; 
         
         const headers = {
             'apikey': SUPABASE_KEY,
@@ -98,16 +99,55 @@
 
         let usuarioActual = null;
         let usuariosGlobal = [];
+        let viajeSeleccionado = null;
 
-        // 1. ARRANCAR WEB
+        // Formato seguro de fecha (AAAA-MM-DD)
+        function hoyString() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        // 1. ARRANCAR WEB Y PILOTO AUTOMÁTICO
         async function init() {
             try {
+                // Cargar usuarios
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers });
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            } catch (e) { alert("Error cargando usuarios"); }
+            } catch (e) { alert("Error conectando con la base de datos."); }
+        }
+
+        async function asegurarDiasLectivos() {
+            let fechasObjetivo = [];
+            let dia = new Date();
+            
+            // Calculamos los próximos 5 días de Lunes a Viernes
+            for(let i = 0; i < 15; i++) {
+                let d = new Date();
+                d.setDate(dia.getDate() + i);
+                if (d.getDay() !== 0 && d.getDay() !== 6) { // Ignorar Sábado (6) y Domingo (0)
+                    fechasObjetivo.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+                }
+                if (fechasObjetivo.length === 5) break;
+            }
+
+            // Consultar qué viajes existen en base de datos
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&select=fecha`, { headers });
+            const viajesExisten = await res.json();
+            const fechasExisten = viajesExisten.map(v => v.fecha.split('T')[0]);
+
+            // Crear los que falten
+            for (let f of fechasObjetivo) {
+                if (!fechasExisten.includes(f)) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/viajes`, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify({ fecha: f, estado: 'abierto', plazas_disponibles: 4 })
+                    });
+                }
+            }
         }
 
         // 2. SISTEMA DE LOGIN
@@ -125,6 +165,9 @@
                 usuarioActual = data[0];
                 document.getElementById('pantallaLogin').classList.add('hidden');
                 
+                // Ejecutamos el piloto automático antes de enseñar los viajes
+                await asegurarDiasLectivos();
+
                 if (usuarioActual.es_admin) {
                     document.getElementById('pantallaAdmin').classList.remove('hidden');
                     cargarPanelJefe();
@@ -135,19 +178,18 @@
             }
         }
 
-        function cerrarSesion() {
-            location.reload(); // Recarga la página entera para salir
-        }
+        function cerrarSesion() { location.reload(); }
 
         // 3. FUNCIONES MODO JEFE
         async function cargarPanelJefe() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?order=fecha.asc`, { headers });
+            // Solo trae días de hoy en adelante
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers });
             const viajes = await res.json();
             const lista = document.getElementById('listaViajesAdmin');
             lista.innerHTML = '';
 
             viajes.forEach(v => {
-                const fechaLimpia = new Date(v.fecha).toLocaleDateString('es-ES');
+                const fechaLimpia = new Date(v.fecha).toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'long'});
                 const esAbierto = v.estado === 'abierto';
                 const colorBtn = esAbierto ? 'bg-rose-500' : 'bg-emerald-500';
                 const textoBtn = esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje';
@@ -156,7 +198,7 @@
                 lista.innerHTML += `
                     <div class="p-4 border-2 border-slate-100 rounded-xl flex justify-between items-center shadow-sm">
                         <div>
-                            <p class="font-bold">${fechaLimpia}</p>
+                            <p class="font-bold capitalize">${fechaLimpia}</p>
                             <p class="text-sm text-slate-500">Estado: ${v.estado.toUpperCase()}</p>
                         </div>
                         <button onclick="cambiarEstadoViaje('${v.id}', '${nuevoEstado}')" class="${colorBtn} text-white px-4 py-2 rounded-lg font-bold text-sm">
@@ -172,14 +214,12 @@
                 headers: headers,
                 body: JSON.stringify({ estado: nuevoEstado })
             });
-            cargarPanelJefe(); // Recargar la lista visual
+            cargarPanelJefe();
         }
 
         // 4. FUNCIONES MODO AMIGOS (EL COCHE)
-        let viajeSeleccionado = null; // Guardará el día que toquen
-
         async function cargarViajesAmigos() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&order=fecha.asc`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers });
             const viajes = await res.json();
             const cal = document.getElementById('calendarioViajes');
             cal.innerHTML = '';
@@ -190,11 +230,10 @@
             }
 
             viajes.forEach(v => {
-                // Sacamos el día, número y mes para ponerlo bonito
-                const fechaObj = new Date(v.fecha);
-                const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
-                const diaNumero = fechaObj.getDate();
-                const mes = fechaObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
+                const f = new Date(v.fecha);
+                const diaSemana = f.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+                const diaNumero = f.getDate();
+                const mes = f.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
                 
                 cal.innerHTML += `
                     <button id="btn_dia_${v.id}" onclick="seleccionarDia('${v.id}')" class="dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm">
@@ -206,17 +245,14 @@
             });
         }
 
-        // Esta función ilumina el día que tocas
         function seleccionarDia(viaje_id) {
             viajeSeleccionado = viaje_id;
             
-            // Apagar todos los botones
             document.querySelectorAll('.dia-btn').forEach(btn => {
                 btn.classList.remove('border-emerald-500', 'bg-emerald-50', 'ring-2', 'ring-emerald-200');
                 btn.classList.add('border-slate-200', 'bg-white');
             });
             
-            // Encender el que hemos tocado
             const btn = document.getElementById(`btn_dia_${viaje_id}`);
             btn.classList.remove('border-slate-200', 'bg-white');
             btn.classList.add('border-emerald-500', 'bg-emerald-50', 'ring-2', 'ring-emerald-200');
@@ -226,11 +262,7 @@
 
         async function cargarCoche() {
             const mapa = document.getElementById('mapaCoche');
-            
-            if(!viajeSeleccionado) {
-                mapa.classList.add('hidden');
-                return;
-            }
+            if(!viajeSeleccionado) { mapa.classList.add('hidden'); return; }
             mapa.classList.remove('hidden');
 
             const asientosHTML = ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'];
