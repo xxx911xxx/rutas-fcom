@@ -437,7 +437,10 @@
                 }
             });
 
-            if (viajesSeleccionados.length === 0) document.getElementById('mapaCoche').classList.add('hidden');
+            if (viajesSeleccionados.length === 0) {
+                document.getElementById('mapaCoche').classList.add('hidden');
+                document.getElementById('zonaCancelar').classList.add('hidden');
+            }
             else cargarCoche();
         }
 
@@ -446,7 +449,7 @@
             const zonaCancelar = document.getElementById('zonaCancelar');
             if(viajesSeleccionados.length === 0) return;
             mapa.classList.remove('hidden');
-            zonaCancelar.classList.add('hidden'); // Ocultar por defecto
+            zonaCancelar.classList.add('hidden');
 
             // 1. Reset visual de asientos
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
@@ -499,12 +502,10 @@
             // 4. LÓGICA DE CANCELACIÓN (Solo si selecciona 1 solo día y tiene reserva)
             const miReserva = reservasMultiples.find(r => r.usuario_id === usuarioActual.id);
             if (viajesSeleccionados.length === 1 && miReserva) {
-                // Buscamos la fecha del viaje en la base de datos
                 const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajesSeleccionados[0]}&select=fecha`, { headers, cache: 'no-store' });
                 const dataV = await resV.json();
                 
                 if (dataV && dataV.length > 0) {
-                    // Calculamos matemáticamente las 48h (Suponiendo viaje a las 08:00 AM)
                     const fechaViaje = new Date(dataV[0].fecha.split('T')[0] + 'T08:00:00');
                     const ahora = new Date();
                     const horasFaltantes = (fechaViaje - ahora) / (1000 * 60 * 60);
@@ -519,8 +520,6 @@
                     }
                     zonaCancelar.classList.remove('hidden');
                 }
-            } else if (viajesSeleccionados.length > 1 && miReserva) {
-                mostrarToast("⚠️ Tienes reserva en algún día seleccionado. Para cancelarla, selecciona los días de 1 en 1.", "aviso");
             }
         }
 
@@ -528,19 +527,15 @@
             if(!confirm("¿Seguro que quieres cancelar tu reserva?\nSe te devolverá 1€ pero perderás tu asiento.")) return;
             
             try {
-                // 1. Borrar reserva
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${reservaId}`, { method: 'DELETE', headers });
                 
-                // 2. Devolver 1€
                 const nuevoSaldo = usuarioActual.saldo + 1;
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo;
                 
-                // 3. Añadir a historial
                 const fechaLimpia = new Date(fechaViajeRaw.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' });
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: 1, tipo: `Cancelación viaje ${fechaLimpia}` }) });
 
-                // 4. Sumar plaza libre
                 const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                 const dataV = await resV.json();
                 if(dataV && dataV.length > 0) {
@@ -548,11 +543,8 @@
                 }
 
                 mostrarToast("🗑️ Reserva cancelada con éxito. 1€ devuelto.", "exito");
-                
-                // Recargar el mapa del coche visualmente
                 cargarCoche();
 
-                // 5. Avisar a Yisu por WhatsApp
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const miNombre = usuarioActual.nombre.split(" ")[0];
                 const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
