@@ -98,7 +98,9 @@
     <script>
         // ======= CONFIGURACIÓN SUPABASE =======
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_pA_FcTBC-G4c2dJiFydsuw_c45SIiAA"; 
+        
+        // ⚠️ PEGA AQUÍ TU CLAVE REAL DE SUPABASE (LA LARGA QUE EMPIEZA POR eyJ)
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
         
         const headers = {
             'apikey': SUPABASE_KEY,
@@ -116,15 +118,19 @@
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
-        // 1. ARRANCAR WEB (Arreglado el error de conexión)
+        // 1. ARRANCAR WEB 
         async function init() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
+                if (!res.ok) throw new Error("Clave incorrecta"); // Aviso seguro si la clave falla
+                
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            } catch (e) { alert("Error conectando con la base de datos."); }
+            } catch (e) { 
+                alert("Error de conexión. Comprueba que la clave de Supabase en el código es la correcta (empieza por eyJ)."); 
+            }
         }
 
         // 2. SISTEMA DE LOGIN (Destructor de espacios invisibles)
@@ -159,7 +165,7 @@
                 });
                 
                 const data = await res.json();
-                await new Promise(r => setTimeout(r, 400)); // Freno visual de 0.4s
+                await new Promise(r => setTimeout(r, 400)); // Freno visual
 
                 if (data.error || data.length === 0) {
                     errorMsg.innerText = "❌ Error: Usuario no encontrado.";
@@ -170,7 +176,7 @@
 
                 const usuarioDDBB = data[0];
 
-                // Limpiamos espacios invisibles para comparar siempre números puros
+                // Limpiamos espacios invisibles para comparar números puros
                 const pinSoloNumerosDB = String(usuarioDDBB.pin || "").replace(/\D/g, '');
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
