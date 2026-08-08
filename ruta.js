@@ -7,7 +7,7 @@ async function generarRuta() {
 
   try {
     // 2. Le pedimos a Supabase los usuarios (Tus amigos) que NO son admin
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?es_admin=eq.false&latitud=not.is.null&select=nombre,latitud,longitud`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?es_admin=eq.false&viaja_hoy=eq.true&latitud=not.is.null&select=nombre,latitud,longitud`, {
       headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
     });
     const pasajeros = await res.json();
