@@ -90,6 +90,9 @@
                     <span>Der.</span><span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
             </div>
+            
+            <!-- Zona de Cancelación de Reserva (Aparece dinámicamente) -->
+            <div id="zonaCancelar" class="mt-6 hidden border-t-2 border-slate-200 pt-6"></div>
         </div>
     </div>
 
@@ -230,27 +233,17 @@
             document.getElementById('carteraSaldoTotal').innerText = `${usuarioActual.saldo}€`;
 
             modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                contenido.classList.remove('translate-y-full');
-            }, 10);
-
+            setTimeout(() => { modal.classList.remove('opacity-0'); contenido.classList.remove('translate-y-full'); }, 10);
             lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 animate-pulse">Consultando el banco...</p>';
             
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo?usuario_id=eq.${usuarioActual.id}`, { headers, cache: 'no-store' });
-                if(!res.ok) {
-                    lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error al conectar con el historial.</p>';
-                    return;
-                }
+                if(!res.ok) { lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error al conectar con el historial.</p>'; return; }
                 let movs = await res.json();
                 movs.reverse(); 
                 
                 lista.innerHTML = '';
-                if(movs.length === 0) {
-                    lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 italic">Todavía no has gastado ni recargado nada.</p>';
-                    return;
-                }
+                if(movs.length === 0) { lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 italic">Todavía no has gastado ni recargado nada.</p>'; return; }
                 movs.forEach(m => {
                     const esPositivo = m.cantidad > 0;
                     const colorTexto = esPositivo ? 'text-emerald-600' : 'text-rose-500';
@@ -288,10 +281,8 @@
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const data = await res.json();
                 const nuevoSaldo = (data[0].saldo || 0) + parseFloat(extra);
-
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Yisu' }) });
-
                 mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
                 cargarPanelJefe(); 
             } catch(e) { mostrarToast("❌ Error al recargar saldo.", "error"); }
@@ -301,17 +292,13 @@
             if(!confirm("⚠️ ¿Quitar a este pasajero?\nSe liberará la plaza y se le devolverá 1€.")) return;
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'DELETE', headers });
-                
                 const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const dataU = await resU.json();
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 }) });
-
                 const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                 const dataV = await resV.json();
                 await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}`, { method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 }) });
-
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' }) });
-
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
             } catch(e) { mostrarToast("❌ Error al eliminar pasajero.", "error"); }
@@ -324,12 +311,10 @@
                 const reservas = await res.json();
                 const ocupados = reservas.map(r => r.asiento);
                 const libres = asientosPosibles.filter(a => !ocupados.includes(a));
-                
                 if(libres.length === 0) { mostrarToast("❌ El coche está lleno.", "error"); return; }
                 const nuevoAsiento = prompt(`El usuario está en: ${asientoActual}\nLos libres son: ${libres.join(", ")}\nEscribe el nuevo asiento:`).toLowerCase().trim();
                 if(!nuevoAsiento) return; 
                 if(!libres.includes(nuevoAsiento)) { mostrarToast("❌ Nombre incorrecto.", "error"); return; }
-
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'PATCH', headers, body: JSON.stringify({ asiento: nuevoAsiento }) });
                 mostrarToast("🔄 Pasajero movido de sitio.", "exito");
                 cargarPanelJefe();
@@ -342,7 +327,6 @@
                 fetch(`${SUPABASE_URL}/rest/v1/reservas`, { headers, cache: 'no-store' }),
                 fetch(`${SUPABASE_URL}/rest/v1/usuarios?order=nombre.asc`, { headers, cache: 'no-store' })
             ]);
-            
             const viajes = await resViajes.json();
             const todasReservas = await resReservas.json();
             usuariosGlobal = await resUsuarios.json();
@@ -365,13 +349,10 @@
                 const fechaLimpia = new Date(v.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'short'});
                 const esAbierto = v.estado === 'abierto';
                 const colorBtn = esAbierto ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700';
-                
                 const resViaje = todasReservas.filter(r => r.viaje_id === v.id);
                 let htmlAsientos = '';
-                
-                if(resViaje.length === 0) {
-                    htmlAsientos = '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg">Coche vacío</p>';
-                } else {
+                if(resViaje.length === 0) { htmlAsientos = '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg">Coche vacío</p>'; } 
+                else {
                     htmlAsientos = '<div class="space-y-2 mt-2">';
                     resViaje.forEach(r => {
                         const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
@@ -387,7 +368,6 @@
                     });
                     htmlAsientos += '</div>';
                 }
-
                 listaViajes.innerHTML += `
                     <div class="p-4 border-2 border-slate-200 rounded-2xl shadow-sm bg-white">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
@@ -417,7 +397,7 @@
         }
 
         // ==========================================
-        // FUNCIONES DE AMIGOS MULTI-RESERVA Y PINTADO INTELIGENTE
+        // FUNCIONES DE AMIGOS MULTI-RESERVA Y CANCELACIONES
         // ==========================================
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
@@ -463,9 +443,20 @@
 
         async function cargarCoche() {
             const mapa = document.getElementById('mapaCoche');
+            const zonaCancelar = document.getElementById('zonaCancelar');
             if(viajesSeleccionados.length === 0) return;
             mapa.classList.remove('hidden');
+            zonaCancelar.classList.add('hidden'); // Ocultar por defecto
 
+            // 1. Reset visual de asientos
+            ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
+                const btn = document.getElementById(`asiento_${id}`);
+                btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
+                btn.disabled = false; 
+                btn.querySelector('.libre-txt').innerText = "Libre";
+            });
+
+            // 2. Traer reservas
             const filter = viajesSeleccionados.join(',');
             const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=in.(${filter})&select=*`, { headers, cache: 'no-store' });
             const reservasMultiples = await res.json();
@@ -473,48 +464,102 @@
             const asientosOcupados = {};
             let tengoReservaEnSeleccion = false;
 
-            // Recopilamos todos los ocupantes y miramos si tú tienes algún asiento
             reservasMultiples.forEach(r => {
                 if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = { nombres: [], soyYo: false };
-                
                 const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
                 asientosOcupados[r.asiento].nombres.push(usr ? usr.nombre.split(" ")[0] : 'Ocupado');
-                
                 if (r.usuario_id === usuarioActual.id) {
                     asientosOcupados[r.asiento].soyYo = true;
                     tengoReservaEnSeleccion = true;
                 }
             });
 
-            // Pintar los botones según los datos recopilados
+            // 3. Pintar asientos
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
                 const dataAsiento = asientosOcupados[id];
 
                 if (dataAsiento) {
                     if (dataAsiento.soyYo) {
-                        // Es tuyo: Azul chillón
-                        btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm`;
+                        btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm transform scale-105`;
                         btn.querySelector('.libre-txt').innerText = "Tu sitio";
                         btn.disabled = true;
                     } else {
-                        // Es de otra persona: Gris bloqueado
                         btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
                         btn.disabled = true;
                         btn.querySelector('.libre-txt').innerText = viajesSeleccionados.length > 1 ? 'Ocupado algún día' : dataAsiento.nombres[0];
                     }
                 } else if (tengoReservaEnSeleccion) {
-                    // Está libre, pero tú YA tienes otro asiento reservado: Bloqueado genérico
                     btn.className = `bg-slate-50 border-2 border-slate-200 text-slate-400 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-not-allowed opacity-60`;
                     btn.disabled = true;
                     btn.querySelector('.libre-txt').innerText = "Bloqueado";
-                } else {
-                    // Libre y puedes cogerlo: Verde esmeralda
-                    btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
-                    btn.disabled = false;
-                    btn.querySelector('.libre-txt').innerText = "Libre";
                 }
             });
+
+            // 4. LÓGICA DE CANCELACIÓN (Solo si selecciona 1 solo día y tiene reserva)
+            const miReserva = reservasMultiples.find(r => r.usuario_id === usuarioActual.id);
+            if (viajesSeleccionados.length === 1 && miReserva) {
+                // Buscamos la fecha del viaje en la base de datos
+                const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajesSeleccionados[0]}&select=fecha`, { headers, cache: 'no-store' });
+                const dataV = await resV.json();
+                
+                if (dataV && dataV.length > 0) {
+                    // Calculamos matemáticamente las 48h (Suponiendo viaje a las 08:00 AM)
+                    const fechaViaje = new Date(dataV[0].fecha.split('T')[0] + 'T08:00:00');
+                    const ahora = new Date();
+                    const horasFaltantes = (fechaViaje - ahora) / (1000 * 60 * 60);
+
+                    if (horasFaltantes >= 48) {
+                        zonaCancelar.innerHTML = `<button onclick="cancelarMiReserva('${viajesSeleccionados[0]}', '${miReserva.id}', '${miReserva.asiento}', '${dataV[0].fecha}')" class="w-full bg-rose-50 text-rose-600 border-2 border-rose-500 hover:bg-rose-100 font-bold py-3 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"><span>❌</span> Cancelar mi reserva (Recuperar 1€)</button>`;
+                    } else {
+                        zonaCancelar.innerHTML = `<div class="bg-slate-100 text-slate-500 border-2 border-slate-300 font-bold py-3 rounded-2xl text-center shadow-sm text-sm flex flex-col">
+                            <span>🔒 Faltan menos de 48h</span>
+                            <span class="text-xs font-normal">Ya no se puede cancelar por la web. Avisa a Yisu.</span>
+                        </div>`;
+                    }
+                    zonaCancelar.classList.remove('hidden');
+                }
+            } else if (viajesSeleccionados.length > 1 && miReserva) {
+                mostrarToast("⚠️ Tienes reserva en algún día seleccionado. Para cancelarla, selecciona los días de 1 en 1.", "aviso");
+            }
+        }
+
+        async function cancelarMiReserva(viajeId, reservaId, asiento, fechaViajeRaw) {
+            if(!confirm("¿Seguro que quieres cancelar tu reserva?\nSe te devolverá 1€ pero perderás tu asiento.")) return;
+            
+            try {
+                // 1. Borrar reserva
+                await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${reservaId}`, { method: 'DELETE', headers });
+                
+                // 2. Devolver 1€
+                const nuevoSaldo = usuarioActual.saldo + 1;
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
+                usuarioActual.saldo = nuevoSaldo;
+                
+                // 3. Añadir a historial
+                const fechaLimpia = new Date(fechaViajeRaw.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: 1, tipo: `Cancelación viaje ${fechaLimpia}` }) });
+
+                // 4. Sumar plaza libre
+                const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
+                const dataV = await resV.json();
+                if(dataV && dataV.length > 0) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}`, { method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 }) });
+                }
+
+                mostrarToast("🗑️ Reserva cancelada con éxito. 1€ devuelto.", "exito");
+                
+                // Recargar el mapa del coche visualmente
+                cargarCoche();
+
+                // 5. Avisar a Yisu por WhatsApp
+                const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
+                const miNombre = usuarioActual.nombre.split(" ")[0];
+                const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
+
+                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank'); }, 1500);
+
+            } catch(e) { mostrarToast("❌ Error al cancelar reserva.", "error"); }
         }
 
         async function reservarSitio(asiento) {
@@ -531,10 +576,7 @@
 
             try {
                 for(let vId of viajesSeleccionados) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
-                        method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) 
-                    });
-                    
+                    await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) });
                     const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${vId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                     const dataViaje = await resViaje.json();
                     if(dataViaje && dataViaje.length > 0) {
@@ -544,15 +586,10 @@
 
                 const saldoOriginal = usuarioActual.saldo;
                 const nuevoSaldo = saldoOriginal - costeTotal;
-                
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
 
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
-                    method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: `Reserva múltiple de ${costeTotal} día(s)` 
-                    })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: `Reserva de ${costeTotal} día(s)` }) });
 
                 mostrarToast(`🚗 ¡${costeTotal} asiento(s) reservado(s) con éxito!`, "exito");
                 
@@ -564,12 +601,8 @@
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
                 
-                if (nuevoSaldo === 0) {
-                    setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
-                }
-
+                if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
                 setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank'); }, 1800);
-                
             } catch(e) { mostrarToast("📡 Error de red al procesar las reservas.", "error"); }
         }
 
