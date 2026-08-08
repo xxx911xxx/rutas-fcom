@@ -88,7 +88,7 @@
 
     <script>
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        // Tu clave pegada por mí para evitar errores de sintaxis
+        // Tu clave de Supabase
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
         
         const headers = {
@@ -110,7 +110,7 @@
         async function init() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
-                if (!res.ok) throw new Error("Fallo de red o clave rechazada");
+                if (!res.ok) throw new Error("Fallo de red");
                 
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
@@ -159,8 +159,8 @@
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
                 if (pinSoloNumerosDB !== pinSoloNumerosWeb) {
-                    // EL CHIVATO: Te va a imprimir exactamente lo que está comparando
-                    errorMsg.innerText = `❌ Error. Supabase dice: '${pinSoloNumerosDB}' | Tú escribes: '${pinSoloNumerosWeb}'`;
+                    // YA NO HAY CHIVATO. Mensaje genérico por seguridad.
+                    errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`;
                     errorMsg.classList.remove('hidden');
                     btn.innerText = textoOriginal;
                     btn.disabled = false;
