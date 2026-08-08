@@ -18,7 +18,6 @@
         <select id="selectorUsuario" class="w-full border-2 border-slate-200 rounded-xl p-4 text-lg mb-4 outline-none font-medium">
             <option value="">Cargando usuarios...</option>
         </select>
-        <!-- NUEVO: inputmode="numeric" para forzar teclado de números en móvil -->
         <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinSecreto" maxlength="4" placeholder="Tu PIN (4 cifras)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] mb-6 outline-none font-bold">
         <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg text-lg transition-all">Entrar</button>
         <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto. Inténtalo de nuevo.</p>
@@ -55,7 +54,7 @@
         
         <!-- CALENDARIO INTERACTIVO -->
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
-            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
+            <!-- Las tarjetas de los días aparecerán aquí -->
         </div>
 
         <!-- MAPA DEL COCHE -->
@@ -117,10 +116,10 @@
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
-        // 1. ARRANCAR WEB
+        // 1. ARRANCAR WEB CON ANTI-CACHÉ
         async function init() {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*&t=${Date.now()}`, { headers });
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
@@ -128,12 +127,11 @@
             } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
-        // 2. SISTEMA DE LOGIN BLINDADO (VERSIÓN DEFINITIVA)
+        // 2. SISTEMA DE LOGIN DESTRUCTOR DE FANTASMAS
         async function iniciarSesion() {
             const errorMsg = document.getElementById('errorLogin');
             const btn = document.querySelector('#pantallaLogin button');
             
-            // Ocultar mensaje antiguo al instante
             errorMsg.classList.add('hidden');
 
             const id = document.getElementById('selectorUsuario').value;
@@ -156,18 +154,16 @@
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // Traemos TODOS los datos de ese usuario concreto de la base de datos
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { 
+                // Forzamos a no leer caché añadiendo Date.now()
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*&t=${Date.now()}`, { 
                     headers: headers
                 });
                 
                 const data = await res.json();
-
-                // Pausa artificial de 0.4 segundos para que NO parezca que se ha congelado
                 await new Promise(r => setTimeout(r, 400));
 
                 if (data.error || data.length === 0) {
-                    errorMsg.innerText = "❌ Error: Usuario no encontrado en la base de datos.";
+                    errorMsg.innerText = "❌ Error: Usuario no encontrado.";
                     errorMsg.classList.remove('hidden');
                     restaurarBotonLogin(btn, textoOriginal);
                     return;
@@ -175,12 +171,11 @@
 
                 const usuarioDDBB = data[0];
 
-                // Limpiamos espacios invisibles de la base de datos y de lo que has escrito tú
-                const pinLimpioDB = String(usuarioDDBB.pin || "").trim();
-                const pinLimpioWeb = String(pinInput).trim();
+                // LA MAGIA AQUÍ: replace(/\D/g, '') elimina CUALQUIER carácter que no sea un número (0-9)
+                const pinSoloNumerosDB = String(usuarioDDBB.pin || "").replace(/\D/g, '');
+                const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
-                // Comparamos
-                if (pinLimpioDB !== pinLimpioWeb) {
+                if (pinSoloNumerosDB !== pinSoloNumerosWeb) {
                     errorMsg.innerText = "❌ PIN incorrecto. Inténtalo de nuevo.";
                     errorMsg.classList.remove('hidden');
                     restaurarBotonLogin(btn, textoOriginal);
@@ -219,7 +214,7 @@
 
         // 3. FUNCIONES MODO JEFE
         async function cargarPanelJefe() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc&t=${Date.now()}`, { headers });
             const viajes = await res.json();
             const lista = document.getElementById('listaViajesAdmin');
             lista.innerHTML = '';
@@ -244,7 +239,6 @@
             });
         }
 
-        // CREADOR DE DÍAS MANUAL
         async function crearDiaManual() {
             const nuevaFecha = document.getElementById('nuevoDiaInput').value;
             if(!nuevaFecha) {
@@ -276,7 +270,7 @@
 
         // 4. FUNCIONES MODO AMIGOS (EL COCHE)
         async function cargarViajesAmigos() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc&t=${Date.now()}`, { headers });
             const viajes = await res.json();
             const cal = document.getElementById('calendarioViajes');
             cal.innerHTML = '';
@@ -331,7 +325,7 @@
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&t=${Date.now()}`, { headers });
             const reservas = await res.json();
 
             reservas.forEach(r => {
