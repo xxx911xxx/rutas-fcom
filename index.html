@@ -239,8 +239,7 @@
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo?usuario_id=eq.${usuarioActual.id}`, { headers, cache: 'no-store' });
                 
                 if(!res.ok) {
-                    // Si falla por el candado RLS, lo mostramos
-                    lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error: Quita el candado (RLS) en la tabla movimientos_saldo en Supabase.</p>';
+                    lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error al conectar con el historial.</p>';
                     return;
                 }
 
@@ -264,7 +263,8 @@
                         <div class="flex justify-between items-center p-4 rounded-2xl ${colorFondo} border border-slate-100/50 shadow-sm">
                             <div class="flex items-center gap-3 truncate pr-2">
                                 <span class="text-lg">${icono}</span>
-                                <span class="font-bold text-sm text-slate-700 truncate">${m.concepto}</span>
+                                <!-- AQUI CORREGIDO: m.tipo en vez de m.concepto -->
+                                <span class="font-bold text-sm text-slate-700 truncate">${m.tipo}</span>
                             </div>
                             <span class="font-black text-lg ${colorTexto} whitespace-nowrap">${signo}${m.cantidad}€</span>
                         </div>
@@ -300,14 +300,15 @@
                     method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
                 });
 
+                // AQUI CORREGIDO: tipo en vez de concepto
                 const resMov = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
                     method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: userId, cantidad: parseFloat(extra), concepto: 'Recarga de Yisu' 
+                        usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Yisu' 
                     })
                 });
 
                 if(!resMov.ok) {
-                    mostrarToast("⚠️ El saldo subió, pero no se guardó el recibo. ¡Quita el candado RLS de movimientos_saldo!", "aviso");
+                    mostrarToast("⚠️ Error guardando el recibo en el historial.", "error");
                 } else {
                     mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
                 }
@@ -334,9 +335,10 @@
                     method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 })
                 });
 
+                // AQUI CORREGIDO: tipo en vez de concepto
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
                     method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: userId, cantidad: 1, concepto: 'Reembolso (Expulsado por Yisu)' 
+                        usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' 
                     })
                 });
 
@@ -554,14 +556,15 @@
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
 
+                // AQUI CORREGIDO: tipo en vez de concepto
                 const resMov = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
                     method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: usuarioActual.id, cantidad: -1, concepto: `Reserva viaje ${textoDia}` 
+                        usuario_id: usuarioActual.id, cantidad: -1, tipo: `Reserva viaje ${textoDia}` 
                     })
                 });
 
                 if(!resMov.ok) {
-                    mostrarToast("⚠️ Reserva guardada, pero falló el historial. Quita el candado RLS de movimientos_saldo.", "aviso");
+                    mostrarToast("⚠️ Reserva guardada, pero falló el historial.", "error");
                 }
 
                 const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}&select=plazas_disponibles`, { headers, cache: 'no-store' });
