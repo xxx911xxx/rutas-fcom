@@ -54,7 +54,7 @@
         
         <!-- CALENDARIO INTERACTIVO -->
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
-            <!-- Las tarjetas de los días aparecerán aquí -->
+            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
         </div>
 
         <!-- MAPA DEL COCHE -->
@@ -129,61 +129,81 @@
 
         // 2. SISTEMA DE LOGIN BLINDADO
         async function iniciarSesion() {
-            const id = document.getElementById('selectorUsuario').value;
-            const pinRaw = document.getElementById('pinSecreto').value;
-            const pin = pinRaw.trim(); // TRUCO 1: Borra espacios invisibles
-            
-            const btn = document.querySelector('#pantallaLogin button');
             const errorMsg = document.getElementById('errorLogin');
+            const btn = document.querySelector('#pantallaLogin button');
             
-            if(!id || !pin) return;
-
+            // Ocultar mensaje antiguo al instante
             errorMsg.classList.add('hidden');
-            const textoOriginal = btn.innerText;
-            btn.innerText = "Comprobando...";
+
+            const id = document.getElementById('selectorUsuario').value;
+            const pinInput = document.getElementById('pinSecreto').value;
+            const pin = pinInput.trim(); // Borra espacios extra
             
-            // TRUCO 2: Apagamos el botón visualmente para que sepas que está pensando
+            // Verificaciones rápidas
+            if(!id) {
+                errorMsg.innerText = "⚠️ Selecciona tu nombre en la lista.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            if(!pin) {
+                errorMsg.innerText = "⚠️ Tienes que escribir tu PIN.";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            // Botón en modo carga
+            btn.innerText = "Comprobando...";
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                // TRUCO 3: "cache: 'no-store'" obliga a no usar la memoria de errores pasados
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { 
-                    headers: headers,
-                    cache: 'no-store'
+                    headers: headers
                 });
                 
                 const data = await res.json();
 
-                if (data.length === 0) {
+                if (data.error) {
+                    errorMsg.innerText = "⚠️ Error de permisos en la base de datos.";
                     errorMsg.classList.remove('hidden');
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                } else {
-                    usuarioActual = data[0];
-                    document.getElementById('pantallaLogin').classList.add('hidden');
-                    
-                    // Reseteamos el botón y el campo del PIN por si vuelven a cerrar sesión
-                    btn.innerText = textoOriginal;
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    document.getElementById('pinSecreto').value = ''; 
-                    
-                    if (usuarioActual.es_admin) {
-                        document.getElementById('pantallaAdmin').classList.remove('hidden');
-                        cargarPanelJefe();
-                    } else {
-                        document.getElementById('pantallaAmigos').classList.remove('hidden');
-                        cargarViajesAmigos();
-                    }
+                    restaurarBotonLogin(btn);
+                    return;
                 }
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    errorMsg.innerText = "❌ PIN incorrecto. Inténtalo de nuevo.";
+                    errorMsg.classList.remove('hidden');
+                    restaurarBotonLogin(btn);
+                    return;
+                } 
+                
+                // ¡PIN CORRECTO!
+                usuarioActual = data[0];
+                document.getElementById('pantallaLogin').classList.add('hidden');
+                
+                restaurarBotonLogin(btn);
+                document.getElementById('pinSecreto').value = ''; 
+                
+                if (usuarioActual.es_admin) {
+                    document.getElementById('pantallaAdmin').classList.remove('hidden');
+                    cargarPanelJefe();
+                } else {
+                    document.getElementById('pantallaAmigos').classList.remove('hidden');
+                    cargarViajesAmigos();
+                }
+                
             } catch (error) {
-                alert("Error de conexión. Comprueba tu internet.");
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                errorMsg.innerText = "📡 Error de conexión. Revisa tu internet.";
+                errorMsg.classList.remove('hidden');
+                restaurarBotonLogin(btn);
             }
+        }
+
+        // Función auxiliar para resetear el botón
+        function restaurarBotonLogin(btn) {
+            btn.innerText = "Entrar";
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
 
         function cerrarSesion() { location.reload(); }
