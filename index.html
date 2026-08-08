@@ -19,8 +19,8 @@
             <option value="">Cargando usuarios...</option>
         </select>
         <input type="password" id="pinSecreto" maxlength="4" placeholder="Tu PIN (4 cifras)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] mb-6 outline-none font-bold">
-        <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg text-lg">Entrar</button>
-        <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto</p>
+        <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg text-lg transition-all">Entrar</button>
+        <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto. Inténtalo de nuevo.</p>
     </div>
 
     <!-- PANTALLA 2: MODO JEFE (ADMIN) -->
@@ -30,7 +30,7 @@
             <button onclick="cerrarSesion()" class="text-slate-500 underline">Salir</button>
         </div>
         
-        <!-- NUEVO: CREADOR DE DÍAS -->
+        <!-- CREADOR DE DÍAS -->
         <div class="mb-8 p-5 bg-blue-50 rounded-2xl border-2 border-blue-100">
             <h3 class="font-bold text-blue-800 mb-3">➕ Añadir nuevo día lectivo:</h3>
             <div class="flex gap-3">
@@ -136,7 +136,6 @@
             
             if(!id || !pin) return;
 
-            // Ocultamos el error de antes y cambiamos el botón
             errorMsg.classList.add('hidden');
             const textoOriginal = btn.innerText;
             btn.innerText = "Comprobando...";
@@ -147,12 +146,10 @@
                 const data = await res.json();
 
                 if (data.length === 0) {
-                    // PIN incorrecto de verdad
                     errorMsg.classList.remove('hidden');
                     btn.innerText = textoOriginal;
                     btn.disabled = false;
                 } else {
-                    // PIN correcto, ¡pa' dentro!
                     usuarioActual = data[0];
                     document.getElementById('pantallaLogin').classList.add('hidden');
                     
@@ -170,7 +167,6 @@
                 btn.disabled = false;
             }
         }
-        }
 
         function cerrarSesion() { location.reload(); }
 
@@ -182,7 +178,6 @@
             lista.innerHTML = '';
 
             viajes.forEach(v => {
-                // Añadimos T12:00:00 para evitar que la zona horaria cambie el día
                 const fechaLimpia = new Date(v.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'long'});
                 const esAbierto = v.estado === 'abierto';
                 const colorBtn = esAbierto ? 'bg-rose-500' : 'bg-emerald-500';
@@ -202,7 +197,7 @@
             });
         }
 
-        // NUEVO: CREAR DÍA CON EL BOTÓN DE LA WEB
+        // CREADOR DE DÍAS MANUAL
         async function crearDiaManual() {
             const nuevaFecha = document.getElementById('nuevoDiaInput').value;
             if(!nuevaFecha) {
@@ -216,8 +211,8 @@
                     headers: headers,
                     body: JSON.stringify({ fecha: nuevaFecha, estado: 'abierto', plazas_disponibles: 4 })
                 });
-                document.getElementById('nuevoDiaInput').value = ''; // Limpiar el campo
-                cargarPanelJefe(); // Recargar la lista
+                document.getElementById('nuevoDiaInput').value = ''; 
+                cargarPanelJefe(); 
             } catch(e) {
                 alert("Error al crear el día. Puede que ya exista.");
             }
