@@ -250,7 +250,6 @@
             if(!viajeSeleccionado) return;
             mapa.classList.remove('hidden');
 
-            // 1. Resetear todos los asientos a libre por defecto
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
                 btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
@@ -258,14 +257,11 @@
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            // 2. Traer las reservas
             const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&select=*`, { headers, cache: 'no-store' });
             const reservas = await res.json();
 
-            // 3. Comprobar si el usuario actual ya tiene un asiento en este viaje
             const miReserva = reservas.find(r => r.usuario_id === usuarioActual.id);
 
-            // 4. Pintar los asientos ocupados
             reservas.forEach(r => {
                 const btn = document.getElementById(`asiento_${r.asiento}`);
                 if(btn) {
@@ -273,11 +269,9 @@
                     const nombreUsuario = usuariosGlobal.find(u => u.id === r.usuario_id)?.nombre || 'Ocupado';
                     
                     if (esMio) {
-                        // Pintamos TU asiento de color azul destacado
                         btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${r.asiento==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm`;
                         btn.querySelector('.libre-txt').innerText = "Tu sitio";
                     } else {
-                        // Pintamos el de los demás de color gris
                         btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${r.asiento==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
                         btn.querySelector('.libre-txt').innerText = nombreUsuario.split(" ")[0];
                     }
@@ -285,11 +279,10 @@
                 }
             });
 
-            // 5. BLOQUEO DEFINITIVO: Si ya tengo un asiento, bloquear visualmente los demás libres para que no me tiente tocar
             if (miReserva) {
                 ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                     const btn = document.getElementById(`asiento_${id}`);
-                    if (!btn.disabled) { // Si seguía verde/libre...
+                    if (!btn.disabled) { 
                         btn.className = `bg-slate-50 border-2 border-slate-200 text-slate-400 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-not-allowed opacity-60`;
                         btn.disabled = true;
                         btn.querySelector('.libre-txt').innerText = "Bloqueado";
@@ -301,8 +294,14 @@
         async function reservarSitio(asiento) {
             if(!viajeSeleccionado) return;
 
+            // BLOQUEO DE SEGURIDAD 1: ¿Tienes saldo?
+            if (usuarioActual.saldo <= 0) {
+                alert("🚫 ¡Cuidado! No te queda saldo (0€). Dile a Yisu que te recargue la cuenta para poder pillar sitio.");
+                return; // Cortamos en seco, no hay reserva.
+            }
+
             try {
-                // Comprobación de seguridad en Base de Datos (con el select=* arreglado)
+                // Comprobación de seguridad en Base de Datos por si acaso
                 const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}&select=*`, { headers, cache: 'no-store' });
                 const checkData = await resCheck.json();
                 
@@ -325,12 +324,15 @@
                 });
 
                 if (!resReserva.ok) {
-                    alert("❌ Error al guardar la reserva.");
+                    alert("❌ Error al guardar la reserva en la base de datos.");
                     return;
                 }
 
+                // Guardamos el saldo que tenía ANTES de pagar para saber si era su último euro
+                const saldoOriginal = usuarioActual.saldo;
+
                 // Cobrar 1€
-                const nuevoSaldo = usuarioActual.saldo - 1;
+                const nuevoSaldo = saldoOriginal - 1;
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, {
                     method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
                 });
@@ -346,11 +348,11 @@
                     });
                 }
 
-                // Éxito
+                // Éxito visual
                 document.getElementById('mensajeReserva').classList.remove('hidden');
                 setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
                 
-                cargarCoche(); // Al recargar, se bloquearán solos los demás asientos
+                cargarCoche(); 
 
                 // MAGIA WHATSAPP
                 const nombresAsientos = {
@@ -365,6 +367,13 @@
                 const miNombre = usuarioActual.nombre.split(" ")[0];
 
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
+                
+                // BLOQUEO DE SEGURIDAD 2: El aviso del último euro
+                if (saldoOriginal === 1) {
+                    alert("⚠️ ¡Aviso! Acabas de gastar tu último euro. Te quedas a 0€ de saldo. Recuerda hablar con Yisu para recargar de cara al próximo viaje.");
+                }
+
+                // Ahora sí, abra WhatsApp
                 window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank');
                 
             } catch(e) { 
