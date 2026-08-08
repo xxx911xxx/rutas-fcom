@@ -29,7 +29,17 @@
             <h1 class="text-2xl font-bold text-blue-600">👑 Panel Jefe</h1>
             <button onclick="cerrarSesion()" class="text-slate-500 underline">Salir</button>
         </div>
-        <h2 class="font-bold mb-4">Días lectivos creados:</h2>
+        
+        <!-- NUEVO: CREADOR DE DÍAS -->
+        <div class="mb-8 p-5 bg-blue-50 rounded-2xl border-2 border-blue-100">
+            <h3 class="font-bold text-blue-800 mb-3">➕ Añadir nuevo día lectivo:</h3>
+            <div class="flex gap-3">
+                <input type="date" id="nuevoDiaInput" class="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 font-medium">
+                <button onclick="crearDiaManual()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow transition-transform active:scale-95">Añadir</button>
+            </div>
+        </div>
+
+        <h2 class="font-bold mb-4">Días creados (Hoy en adelante):</h2>
         <div id="listaViajesAdmin" class="space-y-4"></div>
     </div>
 
@@ -44,7 +54,7 @@
         
         <!-- CALENDARIO INTERACTIVO -->
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
-            <!-- Las tarjetas se generan solas -->
+            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
         </div>
 
         <!-- MAPA DEL COCHE -->
@@ -101,53 +111,20 @@
         let usuariosGlobal = [];
         let viajeSeleccionado = null;
 
-        // Formato seguro de fecha (AAAA-MM-DD)
         function hoyString() {
             const d = new Date();
             return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
         }
 
-        // 1. ARRANCAR WEB Y PILOTO AUTOMÁTICO
+        // 1. ARRANCAR WEB
         async function init() {
             try {
-                // Cargar usuarios
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers });
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
             } catch (e) { alert("Error conectando con la base de datos."); }
-        }
-
-        async function asegurarDiasLectivos() {
-            let fechasObjetivo = [];
-            let dia = new Date();
-            
-            // Calculamos los próximos 5 días de Lunes a Viernes
-            for(let i = 0; i < 15; i++) {
-                let d = new Date();
-                d.setDate(dia.getDate() + i);
-                if (d.getDay() !== 0 && d.getDay() !== 6) { // Ignorar Sábado (6) y Domingo (0)
-                    fechasObjetivo.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-                }
-                if (fechasObjetivo.length === 5) break;
-            }
-
-            // Consultar qué viajes existen en base de datos
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&select=fecha`, { headers });
-            const viajesExisten = await res.json();
-            const fechasExisten = viajesExisten.map(v => v.fecha.split('T')[0]);
-
-            // Crear los que falten
-            for (let f of fechasObjetivo) {
-                if (!fechasExisten.includes(f)) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/viajes`, {
-                        method: 'POST',
-                        headers: headers,
-                        body: JSON.stringify({ fecha: f, estado: 'abierto', plazas_disponibles: 4 })
-                    });
-                }
-            }
         }
 
         // 2. SISTEMA DE LOGIN
@@ -165,9 +142,6 @@
                 usuarioActual = data[0];
                 document.getElementById('pantallaLogin').classList.add('hidden');
                 
-                // Ejecutamos el piloto automático antes de enseñar los viajes
-                await asegurarDiasLectivos();
-
                 if (usuarioActual.es_admin) {
                     document.getElementById('pantallaAdmin').classList.remove('hidden');
                     cargarPanelJefe();
@@ -182,14 +156,14 @@
 
         // 3. FUNCIONES MODO JEFE
         async function cargarPanelJefe() {
-            // Solo trae días de hoy en adelante
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?fecha=gte.${hoyString()}&order=fecha.asc`, { headers });
             const viajes = await res.json();
             const lista = document.getElementById('listaViajesAdmin');
             lista.innerHTML = '';
 
             viajes.forEach(v => {
-                const fechaLimpia = new Date(v.fecha).toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'long'});
+                // Añadimos T12:00:00 para evitar que la zona horaria cambie el día
+                const fechaLimpia = new Date(v.fecha.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', {weekday: 'long', day:'numeric', month:'long'});
                 const esAbierto = v.estado === 'abierto';
                 const colorBtn = esAbierto ? 'bg-rose-500' : 'bg-emerald-500';
                 const textoBtn = esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje';
@@ -206,6 +180,27 @@
                         </button>
                     </div>`;
             });
+        }
+
+        // NUEVO: CREAR DÍA CON EL BOTÓN DE LA WEB
+        async function crearDiaManual() {
+            const nuevaFecha = document.getElementById('nuevoDiaInput').value;
+            if(!nuevaFecha) {
+                alert("Por favor, selecciona una fecha en el calendario.");
+                return;
+            }
+
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/viajes`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ fecha: nuevaFecha, estado: 'abierto', plazas_disponibles: 4 })
+                });
+                document.getElementById('nuevoDiaInput').value = ''; // Limpiar el campo
+                cargarPanelJefe(); // Recargar la lista
+            } catch(e) {
+                alert("Error al crear el día. Puede que ya exista.");
+            }
         }
 
         async function cambiarEstadoViaje(viaje_id, nuevoEstado) {
@@ -225,12 +220,12 @@
             cal.innerHTML = '';
             
             if(viajes.length === 0) {
-                cal.innerHTML = '<p class="col-span-3 text-center text-slate-500 font-bold">No hay viajes abiertos ahora mismo.</p>';
+                cal.innerHTML = '<p class="col-span-3 text-center text-slate-500 font-bold p-4 bg-white rounded-2xl shadow-sm border-2 border-slate-100">No hay viajes abiertos ahora mismo.</p>';
                 return;
             }
 
             viajes.forEach(v => {
-                const f = new Date(v.fecha);
+                const f = new Date(v.fecha.split('T')[0] + 'T12:00:00');
                 const diaSemana = f.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
                 const diaNumero = f.getDate();
                 const mes = f.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
