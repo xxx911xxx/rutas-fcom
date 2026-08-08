@@ -296,12 +296,15 @@
 
             // BLOQUEO DE SEGURIDAD 1: ¿Tienes saldo?
             if (usuarioActual.saldo <= 0) {
-                alert("🚫 ¡Cuidado! No te queda saldo (0€). Dile a Yisu que te recargue la cuenta para poder pillar sitio.");
+                alert("🚫 ¡Vaya! No te queda saldo (0€). Pulsa 'Aceptar' para avisar a Yisu por WhatsApp y recargar tu cuenta.");
+                const miNombre = usuarioActual.nombre.split(" ")[0];
+                const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Me he quedado a 0€ de saldo y necesito recargar para poder reservar sitio en el coche. 💸`;
+                window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank');
                 return; // Cortamos en seco, no hay reserva.
             }
 
             try {
-                // Comprobación de seguridad en Base de Datos por si acaso
+                // Comprobación de seguridad en Base de Datos
                 const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}&select=*`, { headers, cache: 'no-store' });
                 const checkData = await resCheck.json();
                 
@@ -328,7 +331,7 @@
                     return;
                 }
 
-                // Guardamos el saldo que tenía ANTES de pagar para saber si era su último euro
+                // Guardamos el saldo que tenía ANTES de pagar
                 const saldoOriginal = usuarioActual.saldo;
 
                 // Cobrar 1€
@@ -354,7 +357,7 @@
                 
                 cargarCoche(); 
 
-                // MAGIA WHATSAPP
+                // MAGIA WHATSAPP RESERVA NORMAL
                 const nombresAsientos = {
                     'copiloto': 'Copiloto 🚘',
                     'atras_izq': 'Atrás Izquierda 👈',
@@ -373,7 +376,7 @@
                     alert("⚠️ ¡Aviso! Acabas de gastar tu último euro. Te quedas a 0€ de saldo. Recuerda hablar con Yisu para recargar de cara al próximo viaje.");
                 }
 
-                // Ahora sí, abra WhatsApp
+                // Abrir WhatsApp con el mensaje de confirmación de plaza
                 window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank');
                 
             } catch(e) { 
