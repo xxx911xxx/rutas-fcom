@@ -62,7 +62,11 @@
             </div>
         </div>
         
-        <label class="font-bold text-slate-700 mb-2 block">1. Selecciona el día:</label>
+        <div class="flex justify-between items-end mb-2">
+            <label class="font-bold text-slate-700">1. Selecciona los días:</label>
+            <span id="contadorDias" class="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-1 rounded-lg hidden">0 seleccionados</span>
+        </div>
+        
         <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6"></div>
 
         <div id="mapaCoche" class="hidden bg-slate-50 rounded-3xl p-6 border-4 border-slate-200 relative">
@@ -102,9 +106,7 @@
                     <p id="carteraSaldoTotal" class="text-5xl font-black text-slate-800 mt-2 tracking-tighter">0€</p>
                 </div>
                 <div class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-b-2 border-slate-100 pb-2">Historial de movimientos</div>
-                <div id="listaMovimientos" class="space-y-3 max-h-60 overflow-y-auto pr-2">
-                    <!-- Los movimientos se insertan por JS -->
-                </div>
+                <div id="listaMovimientos" class="space-y-3 max-h-60 overflow-y-auto pr-2"></div>
             </div>
         </div>
     </div>
@@ -122,7 +124,8 @@
 
         let usuarioActual = null;
         let usuariosGlobal = [];
-        let viajeSeleccionado = null;
+        // AHORA ES UN ARRAY DE VIAJES SELECCIONADOS
+        let viajesSeleccionados = [];
 
         // ==========================================
         // SISTEMA DE TOASTS
@@ -237,12 +240,10 @@
             
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo?usuario_id=eq.${usuarioActual.id}`, { headers, cache: 'no-store' });
-                
                 if(!res.ok) {
                     lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error al conectar con el historial.</p>';
                     return;
                 }
-
                 let movs = await res.json();
                 movs.reverse(); 
                 
@@ -251,7 +252,6 @@
                     lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 italic">Todavía no has gastado ni recargado nada.</p>';
                     return;
                 }
-
                 movs.forEach(m => {
                     const esPositivo = m.cantidad > 0;
                     const colorTexto = esPositivo ? 'text-emerald-600' : 'text-rose-500';
@@ -263,16 +263,12 @@
                         <div class="flex justify-between items-center p-4 rounded-2xl ${colorFondo} border border-slate-100/50 shadow-sm">
                             <div class="flex items-center gap-3 truncate pr-2">
                                 <span class="text-lg">${icono}</span>
-                                <!-- AQUI CORREGIDO: m.tipo en vez de m.concepto -->
                                 <span class="font-bold text-sm text-slate-700 truncate">${m.tipo}</span>
                             </div>
                             <span class="font-black text-lg ${colorTexto} whitespace-nowrap">${signo}${m.cantidad}€</span>
-                        </div>
-                    `;
+                        </div>`;
                 });
-            } catch(e) {
-                lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">Error al cargar el historial.</p>';
-            }
+            } catch(e) { lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">Error al cargar el historial.</p>'; }
         }
 
         function cerrarCartera() {
@@ -289,58 +285,33 @@
         async function añadirSaldo(userId, name) {
             const extra = prompt(`¿Cuánto dinero le quieres recargar a ${name}?\n(Escribe solo el número, ej: 5)`);
             if(!extra || isNaN(extra) || extra <= 0) return;
-            
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const data = await res.json();
-                const saldoActual = data[0].saldo || 0;
-                const nuevoSaldo = saldoActual + parseFloat(extra);
+                const nuevoSaldo = (data[0].saldo || 0) + parseFloat(extra);
 
-                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, {
-                    method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Yisu' }) });
 
-                // AQUI CORREGIDO: tipo en vez de concepto
-                const resMov = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
-                    method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Yisu' 
-                    })
-                });
-
-                if(!resMov.ok) {
-                    mostrarToast("⚠️ Error guardando el recibo en el historial.", "error");
-                } else {
-                    mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
-                }
-                
+                mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
                 cargarPanelJefe(); 
             } catch(e) { mostrarToast("❌ Error al recargar saldo.", "error"); }
         }
 
         async function eliminarReserva(resId, userId, viajeId) {
             if(!confirm("⚠️ ¿Quitar a este pasajero?\nSe liberará la plaza y se le devolverá 1€.")) return;
-
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'DELETE', headers });
                 
                 const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const dataU = await resU.json();
-                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, {
-                    method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 }) });
 
                 const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
                 const dataV = await resV.json();
-                await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}`, {
-                    method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeId}`, { method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataV[0].plazas_disponibles + 1 }) });
 
-                // AQUI CORREGIDO: tipo en vez de concepto
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
-                    method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' 
-                    })
-                });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' }) });
 
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
@@ -356,10 +327,8 @@
                 const libres = asientosPosibles.filter(a => !ocupados.includes(a));
                 
                 if(libres.length === 0) { mostrarToast("❌ El coche está lleno.", "error"); return; }
-
                 const nuevoAsiento = prompt(`El usuario está en: ${asientoActual}\nLos libres son: ${libres.join(", ")}\nEscribe el nuevo asiento:`).toLowerCase().trim();
                 if(!nuevoAsiento) return; 
-
                 if(!libres.includes(nuevoAsiento)) { mostrarToast("❌ Nombre incorrecto.", "error"); return; }
 
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'PATCH', headers, body: JSON.stringify({ asiento: nuevoAsiento }) });
@@ -449,7 +418,7 @@
         }
 
         // ==========================================
-        // FUNCIONES DE AMIGOS (EL COCHE)
+        // FUNCIONES DE AMIGOS MULTI-RESERVA (NUEVO)
         // ==========================================
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
@@ -468,15 +437,42 @@
         }
 
         function seleccionarDia(viaje_id) {
-            viajeSeleccionado = viaje_id;
-            document.querySelectorAll('.dia-btn').forEach(btn => btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm");
-            document.getElementById(`btn_dia_${viaje_id}`).className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 transition-all shadow-sm";
-            cargarCoche();
+            // Múltiple selección de días
+            const index = viajesSeleccionados.indexOf(viaje_id);
+            if (index > -1) {
+                viajesSeleccionados.splice(index, 1);
+            } else {
+                viajesSeleccionados.push(viaje_id);
+            }
+
+            const contador = document.getElementById('contadorDias');
+            
+            if (viajesSeleccionados.length > 0) {
+                contador.innerText = `${viajesSeleccionados.length} día(s) seleccionados (${viajesSeleccionados.length}€)`;
+                contador.classList.remove('hidden');
+            } else {
+                contador.classList.add('hidden');
+            }
+
+            document.querySelectorAll('.dia-btn').forEach(btn => {
+                const idBtn = btn.id.replace('btn_dia_', '');
+                if (viajesSeleccionados.includes(idBtn)) {
+                    btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 transition-all shadow-sm transform scale-105";
+                } else {
+                    btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm";
+                }
+            });
+
+            if (viajesSeleccionados.length === 0) {
+                document.getElementById('mapaCoche').classList.add('hidden');
+            } else {
+                cargarCoche();
+            }
         }
 
         async function cargarCoche() {
             const mapa = document.getElementById('mapaCoche');
-            if(!viajeSeleccionado) return;
+            if(viajesSeleccionados.length === 0) return;
             mapa.classList.remove('hidden');
 
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
@@ -486,24 +482,28 @@
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&select=*`, { headers, cache: 'no-store' });
-            const reservas = await res.json();
-            const miReserva = reservas.find(r => r.usuario_id === usuarioActual.id);
+            // Filtramos las reservas por TODOS los viajes seleccionados
+            const filter = viajesSeleccionados.join(',');
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=in.(${filter})&select=*`, { headers, cache: 'no-store' });
+            const reservasMultiples = await res.json();
 
-            reservas.forEach(r => {
-                const btn = document.getElementById(`asiento_${r.asiento}`);
-                if(btn) {
-                    const esMio = r.usuario_id === usuarioActual.id;
-                    const nombreUsuario = usuariosGlobal.find(u => u.id === r.usuario_id)?.nombre || 'Ocupado';
-                    
-                    if (esMio) {
-                        btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${r.asiento==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm`;
-                        btn.querySelector('.libre-txt').innerText = "Tu sitio";
-                    } else {
-                        btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${r.asiento==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
-                        btn.querySelector('.libre-txt').innerText = nombreUsuario.split(" ")[0];
-                    }
+            // Verificar si el usuario ya tiene reserva en CUALQUIERA de los días seleccionados
+            const miReserva = reservasMultiples.find(r => r.usuario_id === usuarioActual.id);
+
+            const asientosOcupados = {};
+            reservasMultiples.forEach(r => {
+                if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = [];
+                const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
+                asientosOcupados[r.asiento].push(usr ? usr.nombre.split(" ")[0] : 'Ocupado');
+            });
+
+            ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
+                const btn = document.getElementById(`asiento_${id}`);
+                if (asientosOcupados[id]) {
+                    btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
                     btn.disabled = true; 
+                    // Si seleccionan varios días y un asiento está ocupado al menos un día, avisa que está "ocupado algún día"
+                    btn.querySelector('.libre-txt').innerText = viajesSeleccionados.length > 1 ? 'Ocupado algún día' : asientosOcupados[id][0];
                 }
             });
 
@@ -516,71 +516,64 @@
                         btn.querySelector('.libre-txt').innerText = "Bloqueado";
                     }
                 });
+                mostrarToast("⚠️ Ya tienes reserva en alguno de los días seleccionados.", "aviso");
             }
         }
 
         async function reservarSitio(asiento) {
-            if(!viajeSeleccionado) return;
+            if(viajesSeleccionados.length === 0) return;
             const miNombre = usuarioActual.nombre.split(" ")[0];
+            const costeTotal = viajesSeleccionados.length;
 
-            if (usuarioActual.saldo <= 0) {
-                mostrarToast("🚫 ¡Sin saldo! Redirigiendo a WhatsApp para recargar...", "error");
-                const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Me he quedado a 0€ de saldo y necesito recargar para poder reservar sitio en el coche. 💸`;
+            if (usuarioActual.saldo < costeTotal) {
+                mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
+                const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
                 setTimeout(() => {
                     window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank');
-                }, 1500);
+                }, 1800);
                 return; 
             }
 
             try {
-                const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}&select=*`, { headers, cache: 'no-store' });
-                const checkData = await resCheck.json();
-                
-                if (checkData && checkData.length > 0) {
-                    mostrarToast("⚠️ Ya tienes un asiento reservado para este día.", "aviso");
-                    return; 
+                // Hacer un bucle para guardar cada reserva de cada día seleccionado
+                for(let vId of viajesSeleccionados) {
+                    await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
+                        method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) 
+                    });
+                    
+                    const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${vId}&select=plazas_disponibles`, { headers, cache: 'no-store' });
+                    const dataViaje = await resViaje.json();
+                    if(dataViaje && dataViaje.length > 0) {
+                        await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${vId}`, { method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataViaje[0].plazas_disponibles - 1 }) });
+                    }
                 }
 
-                const btnDia = document.getElementById(`btn_dia_${viajeSeleccionado}`);
-                const textoDia = btnDia ? btnDia.innerText.replace(/\n/g, ' ') : 'ese día';
-
-                const resReserva = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
-                    method: 'POST', headers, body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) 
-                });
-
-                if (!resReserva.ok) { mostrarToast("❌ Error al guardar la reserva.", "error"); return; }
-
                 const saldoOriginal = usuarioActual.saldo;
-                const nuevoSaldo = saldoOriginal - 1;
+                const nuevoSaldo = saldoOriginal - costeTotal;
                 
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
 
-                // AQUI CORREGIDO: tipo en vez de concepto
-                const resMov = await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
+                // Registrar UN único movimiento englobando todos los días
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
                     method: 'POST', headers, body: JSON.stringify({ 
-                        usuario_id: usuarioActual.id, cantidad: -1, tipo: `Reserva viaje ${textoDia}` 
+                        usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: `Reserva múltiple de ${costeTotal} día(s)` 
                     })
                 });
 
-                if(!resMov.ok) {
-                    mostrarToast("⚠️ Reserva guardada, pero falló el historial.", "error");
-                }
-
-                const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}&select=plazas_disponibles`, { headers, cache: 'no-store' });
-                const dataViaje = await resViaje.json();
-                if(dataViaje && dataViaje.length > 0) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}`, { method: 'PATCH', headers, body: JSON.stringify({ plazas_disponibles: dataViaje[0].plazas_disponibles - 1 }) });
-                }
-
-                mostrarToast("🚗 ¡Asiento reservado con éxito!", "exito");
-                cargarCoche(); 
+                mostrarToast(`🚗 ¡${costeTotal} asiento(s) reservado(s) con éxito!`, "exito");
+                
+                // Reiniciar selección después de la compra
+                viajesSeleccionados = [];
+                document.getElementById('contadorDias').classList.add('hidden');
+                document.querySelectorAll('.dia-btn').forEach(btn => btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm");
+                document.getElementById('mapaCoche').classList.add('hidden');
 
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
-                const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
+                const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
                 
-                if (saldoOriginal === 1) {
-                    setTimeout(() => mostrarToast("⚠️ Último euro gastado. ¡Recarga pronto!", "aviso"), 800);
+                if (nuevoSaldo === 0) {
+                    setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
                 }
 
                 setTimeout(() => {
@@ -588,7 +581,7 @@
                 }, 1800);
                 
             } catch(e) { 
-                mostrarToast("📡 Error de red al procesar la reserva.", "error"); 
+                mostrarToast("📡 Error de red al procesar las reservas.", "error"); 
             }
         }
 
