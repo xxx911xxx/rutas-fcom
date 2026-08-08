@@ -124,7 +124,6 @@
 
         let usuarioActual = null;
         let usuariosGlobal = [];
-        // AHORA ES UN ARRAY DE VIAJES SELECCIONADOS
         let viajesSeleccionados = [];
 
         // ==========================================
@@ -418,7 +417,7 @@
         }
 
         // ==========================================
-        // FUNCIONES DE AMIGOS MULTI-RESERVA (NUEVO)
+        // FUNCIONES DE AMIGOS MULTI-RESERVA Y PINTADO INTELIGENTE
         // ==========================================
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
@@ -437,16 +436,11 @@
         }
 
         function seleccionarDia(viaje_id) {
-            // Múltiple selección de días
             const index = viajesSeleccionados.indexOf(viaje_id);
-            if (index > -1) {
-                viajesSeleccionados.splice(index, 1);
-            } else {
-                viajesSeleccionados.push(viaje_id);
-            }
+            if (index > -1) viajesSeleccionados.splice(index, 1);
+            else viajesSeleccionados.push(viaje_id);
 
             const contador = document.getElementById('contadorDias');
-            
             if (viajesSeleccionados.length > 0) {
                 contador.innerText = `${viajesSeleccionados.length} día(s) seleccionados (${viajesSeleccionados.length}€)`;
                 contador.classList.remove('hidden');
@@ -463,11 +457,8 @@
                 }
             });
 
-            if (viajesSeleccionados.length === 0) {
-                document.getElementById('mapaCoche').classList.add('hidden');
-            } else {
-                cargarCoche();
-            }
+            if (viajesSeleccionados.length === 0) document.getElementById('mapaCoche').classList.add('hidden');
+            else cargarCoche();
         }
 
         async function cargarCoche() {
@@ -475,49 +466,55 @@
             if(viajesSeleccionados.length === 0) return;
             mapa.classList.remove('hidden');
 
-            ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
-                const btn = document.getElementById(`asiento_${id}`);
-                btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
-                btn.disabled = false; 
-                btn.querySelector('.libre-txt').innerText = "Libre";
-            });
-
-            // Filtramos las reservas por TODOS los viajes seleccionados
             const filter = viajesSeleccionados.join(',');
             const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=in.(${filter})&select=*`, { headers, cache: 'no-store' });
             const reservasMultiples = await res.json();
 
-            // Verificar si el usuario ya tiene reserva en CUALQUIERA de los días seleccionados
-            const miReserva = reservasMultiples.find(r => r.usuario_id === usuarioActual.id);
-
             const asientosOcupados = {};
-            reservasMultiples.forEach(r => {
-                if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = [];
-                const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
-                asientosOcupados[r.asiento].push(usr ? usr.nombre.split(" ")[0] : 'Ocupado');
-            });
+            let tengoReservaEnSeleccion = false;
 
-            ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
-                const btn = document.getElementById(`asiento_${id}`);
-                if (asientosOcupados[id]) {
-                    btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
-                    btn.disabled = true; 
-                    // Si seleccionan varios días y un asiento está ocupado al menos un día, avisa que está "ocupado algún día"
-                    btn.querySelector('.libre-txt').innerText = viajesSeleccionados.length > 1 ? 'Ocupado algún día' : asientosOcupados[id][0];
+            // Recopilamos todos los ocupantes y miramos si tú tienes algún asiento
+            reservasMultiples.forEach(r => {
+                if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = { nombres: [], soyYo: false };
+                
+                const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
+                asientosOcupados[r.asiento].nombres.push(usr ? usr.nombre.split(" ")[0] : 'Ocupado');
+                
+                if (r.usuario_id === usuarioActual.id) {
+                    asientosOcupados[r.asiento].soyYo = true;
+                    tengoReservaEnSeleccion = true;
                 }
             });
 
-            if (miReserva) {
-                ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
-                    const btn = document.getElementById(`asiento_${id}`);
-                    if (!btn.disabled) { 
-                        btn.className = `bg-slate-50 border-2 border-slate-200 text-slate-400 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-not-allowed opacity-60`;
+            // Pintar los botones según los datos recopilados
+            ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
+                const btn = document.getElementById(`asiento_${id}`);
+                const dataAsiento = asientosOcupados[id];
+
+                if (dataAsiento) {
+                    if (dataAsiento.soyYo) {
+                        // Es tuyo: Azul chillón
+                        btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm`;
+                        btn.querySelector('.libre-txt').innerText = "Tu sitio";
                         btn.disabled = true;
-                        btn.querySelector('.libre-txt').innerText = "Bloqueado";
+                    } else {
+                        // Es de otra persona: Gris bloqueado
+                        btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
+                        btn.disabled = true;
+                        btn.querySelector('.libre-txt').innerText = viajesSeleccionados.length > 1 ? 'Ocupado algún día' : dataAsiento.nombres[0];
                     }
-                });
-                mostrarToast("⚠️ Ya tienes reserva en alguno de los días seleccionados.", "aviso");
-            }
+                } else if (tengoReservaEnSeleccion) {
+                    // Está libre, pero tú YA tienes otro asiento reservado: Bloqueado genérico
+                    btn.className = `bg-slate-50 border-2 border-slate-200 text-slate-400 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-not-allowed opacity-60`;
+                    btn.disabled = true;
+                    btn.querySelector('.libre-txt').innerText = "Bloqueado";
+                } else {
+                    // Libre y puedes cogerlo: Verde esmeralda
+                    btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
+                    btn.disabled = false;
+                    btn.querySelector('.libre-txt').innerText = "Libre";
+                }
+            });
         }
 
         async function reservarSitio(asiento) {
@@ -528,14 +525,11 @@
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
                 const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
-                setTimeout(() => {
-                    window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank');
-                }, 1800);
+                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank'); }, 1800);
                 return; 
             }
 
             try {
-                // Hacer un bucle para guardar cada reserva de cada día seleccionado
                 for(let vId of viajesSeleccionados) {
                     await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
                         method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) 
@@ -554,7 +548,6 @@
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
 
-                // Registrar UN único movimiento englobando todos los días
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, {
                     method: 'POST', headers, body: JSON.stringify({ 
                         usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: `Reserva múltiple de ${costeTotal} día(s)` 
@@ -563,7 +556,6 @@
 
                 mostrarToast(`🚗 ¡${costeTotal} asiento(s) reservado(s) con éxito!`, "exito");
                 
-                // Reiniciar selección después de la compra
                 viajesSeleccionados = [];
                 document.getElementById('contadorDias').classList.add('hidden');
                 document.querySelectorAll('.dia-btn').forEach(btn => btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm");
@@ -576,13 +568,9 @@
                     setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
                 }
 
-                setTimeout(() => {
-                    window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank');
-                }, 1800);
+                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank'); }, 1800);
                 
-            } catch(e) { 
-                mostrarToast("📡 Error de red al procesar las reservas.", "error"); 
-            }
+            } catch(e) { mostrarToast("📡 Error de red al procesar las reservas.", "error"); }
         }
 
         init();
