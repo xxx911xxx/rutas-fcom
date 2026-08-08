@@ -20,8 +20,13 @@
         </div>
 
         <div id="panelBotones" class="hidden space-y-4 mt-8">
-            <div id="estadoActual" class="text-center p-4 rounded-xl mb-6 font-bold text-lg">
+            <div id="estadoActual" class="text-center p-4 rounded-xl mb-4 font-bold text-lg">
                 <!-- Aquí saldrá el estado -->
+            </div>
+
+            <!-- NUEVO: CAJA DEL PIN -->
+            <div class="mb-6">
+                <input type="password" id="pinSecreto" maxlength="4" placeholder="Tu PIN (ej: 1234)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] focus:ring-2 focus:ring-blue-500 outline-none font-bold">
             </div>
 
             <button onclick="reservar(true)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-5 rounded-2xl shadow-lg transition-transform transform active:scale-95 text-lg">
@@ -33,8 +38,11 @@
             </button>
         </div>
         
-        <p id="mensaje" class="text-center mt-6 text-base font-bold text-emerald-600 hidden transition-all">
+        <p id="mensajeExito" class="text-center mt-6 text-base font-bold text-emerald-600 hidden transition-all">
             🎉 ¡Guardado correctamente!
+        </p>
+        <p id="mensajeError" class="text-center mt-6 text-base font-bold text-rose-600 hidden transition-all">
+            🔒 PIN incorrecto. Inténtalo de nuevo.
         </p>
     </div>
 
@@ -42,21 +50,22 @@
         // ======= TUS DATOS DE SUPABASE =======
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
         
-        // ABAJO: Borra "TU_CLAVE_PUBLICA_AQUI" (manteniendo las comillas) y pega tu llave Publishable de Supabase
-        const SUPABASE_ANON_KEY = "TU_CLAVE_PUBLICA_AQUI"; 
+        // Pega aquí tu Publishable key
+        const SUPABASE_ANON_KEY = "sb_secret_rjBSYdibjgOdbR4F7mVatg_3r_0IuirI"; 
         // =====================================
 
         const headers = {
             'apikey': SUPABASE_ANON_KEY,
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation' // Esto le dice a Supabase que nos avise de si ha modificado a alguien o no
         };
 
         let usuariosData = [];
 
         async function cargarUsuarios() {
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?es_admin=eq.false&select=id,nombre,viaja_hoy`, { headers });
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?es_admin=eq.false&select=id,nombre,viaja_hoy`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
                 usuariosData = await res.json();
                 
                 const selector = document.getElementById('selectorUsuario');
@@ -66,7 +75,7 @@
                     selector.innerHTML += `<option value="${user.id}">${user.nombre}</option>`;
                 });
             } catch (error) {
-                alert("Error conectando con la base de datos.");
+                console.error("Error conectando:", error);
             }
         }
 
@@ -74,6 +83,8 @@
             const idSeleccionado = document.getElementById('selectorUsuario').value;
             const panel = document.getElementById('panelBotones');
             const divEstado = document.getElementById('estadoActual');
+            
+            document.getElementById('pinSecreto').value = ''; // Limpiar el pin al cambiar de usuario
             
             if (!idSeleccionado) {
                 panel.classList.add('hidden');
@@ -84,35 +95,56 @@
             const usuario = usuariosData.find(u => u.id == idSeleccionado);
             
             if (usuario.viaja_hoy) {
-                divEstado.className = "text-center p-4 rounded-xl mb-6 font-bold text-lg bg-emerald-100 text-emerald-700 border-2 border-emerald-200";
+                divEstado.className = "text-center p-4 rounded-xl mb-4 font-bold text-lg bg-emerald-100 text-emerald-700 border-2 border-emerald-200";
                 divEstado.innerHTML = "Estado actual: VIAJAS HOY";
             } else {
-                divEstado.className = "text-center p-4 rounded-xl mb-6 font-bold text-lg bg-rose-100 text-rose-700 border-2 border-rose-200";
+                divEstado.className = "text-center p-4 rounded-xl mb-4 font-bold text-lg bg-rose-100 text-rose-700 border-2 border-rose-200";
                 divEstado.innerHTML = "Estado actual: NO VIAJAS";
             }
         }
 
         async function reservar(viaja) {
             const id = document.getElementById('selectorUsuario').value;
+            const pinEntregado = document.getElementById('pinSecreto').value;
+            const msgExito = document.getElementById('mensajeExito');
+            const msgError = document.getElementById('mensajeError');
+            
+            msgExito.classList.add('hidden');
+            msgError.classList.add('hidden');
+
             if(!id) return;
+            if(!pinEntregado) {
+                alert("Por favor, introduce tu PIN de 4 números.");
+                return;
+            }
 
             try {
-                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}`, {
+                // Aquí está la magia: le decimos a Supabase "Actualiza al usuario X, SOLO SI el pin coincide con el que te mando"
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pinEntregado}`, {
                     method: 'PATCH',
                     headers: headers,
                     body: JSON.stringify({ viaja_hoy: viaja })
                 });
                 
+                const respuesta = await res.json();
+
+                // Si la respuesta está vacía, significa que el PIN era incorrecto y Supabase bloqueó la acción
+                if (respuesta.length === 0) {
+                    msgError.classList.remove('hidden');
+                    return;
+                }
+                
+                // Si llegamos aquí, el PIN era correcto
                 const usuario = usuariosData.find(u => u.id == id);
                 usuario.viaja_hoy = viaja;
                 cargarEstado();
+                document.getElementById('pinSecreto').value = ''; // Borramos el PIN por seguridad
 
-                const msg = document.getElementById('mensaje');
-                msg.classList.remove('hidden');
-                setTimeout(() => msg.classList.add('hidden'), 3000);
+                msgExito.classList.remove('hidden');
+                setTimeout(() => msgExito.classList.add('hidden'), 3000);
                 
             } catch (error) {
-                alert("Error al guardar.");
+                alert("Error de conexión.");
             }
         }
 
