@@ -41,9 +41,10 @@
         </div>
         
         <label class="font-bold text-slate-700 mb-2 block">1. Selecciona el día:</label>
-        <select id="selectorViaje" class="w-full border-2 border-slate-200 rounded-xl p-3 mb-6 outline-none" onchange="cargarCoche()">
-            <option value="">Elige un día abierto...</option>
-        </select>
+      <!-- NUEVO CALENDARIO INTERACTIVO -->
+        <div id="calendarioViajes" class="grid grid-cols-3 gap-3 mb-6">
+            <!-- Las tarjetas de los días aparecerán aquí mágicamente -->
+        </div>
 
         <!-- MAPA DEL COCHE -->
         <div id="mapaCoche" class="hidden bg-slate-50 rounded-3xl p-6 border-4 border-slate-200 relative">
@@ -86,7 +87,7 @@
     <script>
         // ======= CONFIGURACIÓN SUPABASE =======
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_pA_FcTBC-G4c2dJiFydsuw_c45SIiAA"; // ⚠️ PON TU PUBLISHABLE KEY AQUÍ
+        const SUPABASE_KEY = "sb_publishable_pA_FcTBC-G4c2dJiFydsuw_c45SIiAA"; // Tu clave está aquí
         
         const headers = {
             'apikey': SUPABASE_KEY,
@@ -175,72 +176,103 @@
         }
 
         // 4. FUNCIONES MODO AMIGOS (EL COCHE)
+        let viajeSeleccionado = null; // Guardará el día que toquen
+
         async function cargarViajesAmigos() {
             const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&order=fecha.asc`, { headers });
             const viajes = await res.json();
-            const sel = document.getElementById('selectorViaje');
-            sel.innerHTML = '<option value="">Selecciona una fecha...</option>';
+            const cal = document.getElementById('calendarioViajes');
+            cal.innerHTML = '';
+            
+            if(viajes.length === 0) {
+                cal.innerHTML = '<p class="col-span-3 text-center text-slate-500 font-bold">No hay viajes abiertos ahora mismo.</p>';
+                return;
+            }
+
             viajes.forEach(v => {
-                sel.innerHTML += `<option value="${v.id}">${new Date(v.fecha).toLocaleDateString('es-ES')}</option>`;
+                // Sacamos el día, número y mes para ponerlo bonito
+                const fechaObj = new Date(v.fecha);
+                const diaSemana = fechaObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+                const diaNumero = fechaObj.getDate();
+                const mes = fechaObj.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
+                
+                cal.innerHTML += `
+                    <button id="btn_dia_${v.id}" onclick="seleccionarDia('${v.id}')" class="dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm">
+                        <span class="text-xs font-bold text-slate-400">${diaSemana}</span>
+                        <span class="text-2xl font-black text-slate-700">${diaNumero}</span>
+                        <span class="text-xs font-bold text-slate-500">${mes}</span>
+                    </button>
+                `;
             });
         }
 
+        // Esta función ilumina el día que tocas
+        function seleccionarDia(viaje_id) {
+            viajeSeleccionado = viaje_id;
+            
+            // Apagar todos los botones
+            document.querySelectorAll('.dia-btn').forEach(btn => {
+                btn.classList.remove('border-emerald-500', 'bg-emerald-50', 'ring-2', 'ring-emerald-200');
+                btn.classList.add('border-slate-200', 'bg-white');
+            });
+            
+            // Encender el que hemos tocado
+            const btn = document.getElementById(`btn_dia_${viaje_id}`);
+            btn.classList.remove('border-slate-200', 'bg-white');
+            btn.classList.add('border-emerald-500', 'bg-emerald-50', 'ring-2', 'ring-emerald-200');
+            
+            cargarCoche();
+        }
+
         async function cargarCoche() {
-            const viaje_id = document.getElementById('selectorViaje').value;
             const mapa = document.getElementById('mapaCoche');
             
-            if(!viaje_id) {
+            if(!viajeSeleccionado) {
                 mapa.classList.add('hidden');
                 return;
             }
             mapa.classList.remove('hidden');
 
-            // Resetear todos los asientos a libre (Verde)
             const asientosHTML = ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'];
             asientosHTML.forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
-                btn.className = "asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center";
+                btn.className = "asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm";
                 if(id === 'copiloto') btn.classList.replace('h-20', 'h-24');
                 btn.disabled = false;
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            // Buscar quién ha reservado ya
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viaje_id}`, { headers });
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}`, { headers });
             const reservas = await res.json();
 
             reservas.forEach(r => {
                 const btn = document.getElementById(`asiento_${r.asiento}`);
                 if(btn) {
                     const nombreUsuario = usuariosGlobal.find(u => u.id === r.usuario_id)?.nombre || 'Ocupado';
-                    // Poner el botón rojo y bloquearlo
-                    btn.className = "bg-rose-100 border-2 border-rose-500 text-rose-700 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center opacity-70 cursor-not-allowed";
+                    btn.className = "bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm h-20 flex flex-col justify-center items-center opacity-70 cursor-not-allowed";
                     if(r.asiento === 'copiloto') btn.classList.replace('h-20', 'h-24');
                     btn.disabled = true;
-                    btn.querySelector('.libre-txt').innerText = nombreUsuario.split(" ")[0]; // Solo el primer nombre
+                    btn.querySelector('.libre-txt').innerText = nombreUsuario.split(" ")[0];
                 }
             });
         }
 
         async function reservarSitio(asiento) {
-            const viaje_id = document.getElementById('selectorViaje').value;
-            if(!viaje_id) return;
+            if(!viajeSeleccionado) return;
 
             try {
-                // 1. Guardar la reserva
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ viaje_id: viaje_id, usuario_id: usuarioActual.id, asiento: asiento })
+                    body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento })
                 });
 
-                // 2. Mostrar éxito y recargar el mapa visual
                 const msg = document.getElementById('mensajeReserva');
                 msg.classList.remove('hidden');
                 setTimeout(() => msg.classList.add('hidden'), 3000);
                 cargarCoche(); 
                 
-            } catch(e) { alert("Hubo un error al reservar el sitio."); }
+            } catch(e) { alert("Error: Puede que ya hayas reservado un sitio para este día."); }
         }
 
         init();
