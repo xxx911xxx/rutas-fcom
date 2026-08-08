@@ -196,7 +196,7 @@
                 const colorBtn = esAbierto ? 'bg-rose-500' : 'bg-emerald-500';
                 lista.innerHTML += `
                     <div class="p-4 border-2 border-slate-100 rounded-xl flex justify-between items-center shadow-sm">
-                        <div><p class="font-bold capitalize">${fechaLimpia}</p><p class="text-sm text-slate-500">Estado: ${v.estado.toUpperCase()}</p></div>
+                        <div><p class="font-bold capitalize">${fechaLimpia}</p><p class="text-sm text-slate-500">Estado: ${v.estado.toUpperCase()}</p><p class="text-xs font-bold text-slate-400 mt-1">Plazas: ${v.plazas_disponibles}</p></div>
                         <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} text-white px-4 py-2 rounded-lg font-bold text-sm">
                             ${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}
                         </button>
@@ -270,25 +270,57 @@
             if(!viajeSeleccionado) return;
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
+                // PASO 0: Comprobar si este usuario ya tiene reservado un asiento en este viaje
+                const resCheck = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=eq.${viajeSeleccionado}&usuario_id=eq.${usuarioActual.id}`, { headers, cache: 'no-store' });
+                const checkData = await resCheck.json();
+                
+                if (checkData && checkData.length > 0) {
+                    alert("⚠️ Ya tienes un asiento reservado para este día. ¡Deja sitio para los demás!");
+                    return; // Corta la ejecución aquí, no sigue reservando
+                }
+
+                // PASO 1: Guardar reserva
+                const resReserva = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
                     method: 'POST', 
                     headers, 
                     body: JSON.stringify({ 
                         viaje_id: viajeSeleccionado, 
                         usuario_id: usuarioActual.id, 
                         asiento: asiento,
+                        estado: 'confirmada',
                         coste_cobrado: 1 
                     }) 
                 });
 
-                if (!res.ok) {
+                if (!resReserva.ok) {
                     alert("❌ Error al guardar la reserva en la base de datos. Revisa tu conexión.");
                     return;
                 }
 
+                // PASO 2: Cobrar 1€ al usuario
+                const nuevoSaldo = usuarioActual.saldo - 1;
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({ saldo: nuevoSaldo })
+                });
+                usuarioActual.saldo = nuevoSaldo; // Actualiza en memoria
+
+                // PASO 3: Restar 1 plaza al viaje
+                const resViaje = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}&select=plazas_disponibles`, { headers, cache: 'no-store' });
+                const dataViaje = await resViaje.json();
+                if(dataViaje && dataViaje.length > 0) {
+                    const plazasActuales = dataViaje[0].plazas_disponibles;
+                    await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajeSeleccionado}`, {
+                        method: 'PATCH',
+                        headers,
+                        body: JSON.stringify({ plazas_disponibles: plazasActuales - 1 })
+                    });
+                }
+
+                // Éxito visual
                 document.getElementById('mensajeReserva').classList.remove('hidden');
                 setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
-                
                 cargarCoche(); 
 
                 // --- MAGIA WHATSAPP DIRECTO A TU NÚMERO ---
@@ -305,11 +337,10 @@
 
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
                 
-                // Redirige directamente al chat con el número proporcionado (+34 674 596 477)
                 window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank');
                 
             } catch(e) { 
-                alert("Error de red al intentar reservar."); 
+                alert("Error de red al intentar procesar la reserva completa."); 
             }
         }
 
