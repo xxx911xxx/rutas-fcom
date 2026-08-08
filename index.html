@@ -88,8 +88,8 @@
 
     <script>
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        // Pega tu clave larga aquí
-        const SUPABASE_KEY = "TU_CLAVE_LARGA_QUE_EMPIEZA_POR_eyJ_AQUI"; 
+        // Tu clave pegada por mí para evitar errores de sintaxis
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
         
         const headers = {
             'apikey': SUPABASE_KEY,
@@ -110,11 +110,15 @@
         async function init() {
             try {
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?select=*`, { headers, cache: 'no-store' });
+                if (!res.ok) throw new Error("Fallo de red o clave rechazada");
+                
                 usuariosGlobal = await res.json();
                 const sel = document.getElementById('selectorUsuario');
                 sel.innerHTML = '<option value="">¿Quién eres?</option>';
                 usuariosGlobal.forEach(u => sel.innerHTML += `<option value="${u.id}">${u.nombre}</option>`);
-            } catch (e) { alert("Error conectando con la base de datos."); }
+            } catch (e) { 
+                alert("Error conectando con la base de datos."); 
+            }
         }
 
         async function iniciarSesion() {
@@ -141,6 +145,14 @@
                     headers, cache: 'no-store'
                 });
                 const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    errorMsg.innerText = "❌ Usuario no encontrado.";
+                    errorMsg.classList.remove('hidden');
+                    btn.innerText = textoOriginal;
+                    btn.disabled = false;
+                    return;
+                }
 
                 const usuarioDDBB = data[0];
                 const pinSoloNumerosDB = String(usuarioDDBB.pin || "").replace(/\D/g, '');
