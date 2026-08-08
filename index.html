@@ -18,7 +18,8 @@
         <select id="selectorUsuario" class="w-full border-2 border-slate-200 rounded-xl p-4 text-lg mb-4 outline-none font-medium">
             <option value="">Cargando usuarios...</option>
         </select>
-        <input type="password" id="pinSecreto" maxlength="4" placeholder="Tu PIN (4 cifras)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] mb-6 outline-none font-bold">
+        <!-- NUEVO: inputmode="numeric" para forzar teclado de números en móvil -->
+        <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinSecreto" maxlength="4" placeholder="Tu PIN (4 cifras)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] mb-6 outline-none font-bold">
         <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg text-lg transition-all">Entrar</button>
         <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto. Inténtalo de nuevo.</p>
     </div>
@@ -127,7 +128,7 @@
             } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
-        // 2. SISTEMA DE LOGIN BLINDADO
+        // 2. SISTEMA DE LOGIN BLINDADO (VERSIÓN DEFINITIVA)
         async function iniciarSesion() {
             const errorMsg = document.getElementById('errorLogin');
             const btn = document.querySelector('#pantallaLogin button');
@@ -137,51 +138,60 @@
 
             const id = document.getElementById('selectorUsuario').value;
             const pinInput = document.getElementById('pinSecreto').value;
-            const pin = pinInput.trim(); // Borra espacios extra
             
-            // Verificaciones rápidas
             if(!id) {
                 errorMsg.innerText = "⚠️ Selecciona tu nombre en la lista.";
                 errorMsg.classList.remove('hidden');
                 return;
             }
-            if(!pin) {
+            if(!pinInput) {
                 errorMsg.innerText = "⚠️ Tienes que escribir tu PIN.";
                 errorMsg.classList.remove('hidden');
                 return;
             }
 
-            // Botón en modo carga
+            const textoOriginal = btn.innerText;
             btn.innerText = "Comprobando...";
             btn.disabled = true;
             btn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
-                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { 
+                // Traemos TODOS los datos de ese usuario concreto de la base de datos
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&select=*`, { 
                     headers: headers
                 });
                 
                 const data = await res.json();
 
-                if (data.error) {
-                    errorMsg.innerText = "⚠️ Error de permisos en la base de datos.";
-                    errorMsg.classList.remove('hidden');
-                    restaurarBotonLogin(btn);
-                    return;
-                }
+                // Pausa artificial de 0.4 segundos para que NO parezca que se ha congelado
+                await new Promise(r => setTimeout(r, 400));
 
-                if (!Array.isArray(data) || data.length === 0) {
-                    errorMsg.innerText = "❌ PIN incorrecto. Inténtalo de nuevo.";
+                if (data.error || data.length === 0) {
+                    errorMsg.innerText = "❌ Error: Usuario no encontrado en la base de datos.";
                     errorMsg.classList.remove('hidden');
-                    restaurarBotonLogin(btn);
+                    restaurarBotonLogin(btn, textoOriginal);
                     return;
                 } 
+
+                const usuarioDDBB = data[0];
+
+                // Limpiamos espacios invisibles de la base de datos y de lo que has escrito tú
+                const pinLimpioDB = String(usuarioDDBB.pin || "").trim();
+                const pinLimpioWeb = String(pinInput).trim();
+
+                // Comparamos
+                if (pinLimpioDB !== pinLimpioWeb) {
+                    errorMsg.innerText = "❌ PIN incorrecto. Inténtalo de nuevo.";
+                    errorMsg.classList.remove('hidden');
+                    restaurarBotonLogin(btn, textoOriginal);
+                    return;
+                }
                 
                 // ¡PIN CORRECTO!
-                usuarioActual = data[0];
+                usuarioActual = usuarioDDBB;
                 document.getElementById('pantallaLogin').classList.add('hidden');
                 
-                restaurarBotonLogin(btn);
+                restaurarBotonLogin(btn, textoOriginal);
                 document.getElementById('pinSecreto').value = ''; 
                 
                 if (usuarioActual.es_admin) {
@@ -195,13 +205,12 @@
             } catch (error) {
                 errorMsg.innerText = "📡 Error de conexión. Revisa tu internet.";
                 errorMsg.classList.remove('hidden');
-                restaurarBotonLogin(btn);
+                restaurarBotonLogin(btn, textoOriginal);
             }
         }
 
-        // Función auxiliar para resetear el botón
-        function restaurarBotonLogin(btn) {
-            btn.innerText = "Entrar";
+        function restaurarBotonLogin(btn, texto) {
+            btn.innerText = texto;
             btn.disabled = false;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
