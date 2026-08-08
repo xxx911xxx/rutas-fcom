@@ -127,29 +127,49 @@
             } catch (e) { alert("Error conectando con la base de datos."); }
         }
 
-        // 2. SISTEMA DE LOGIN
+        // 2. SISTEMA DE LOGIN MEJORADO
         async function iniciarSesion() {
             const id = document.getElementById('selectorUsuario').value;
             const pin = document.getElementById('pinSecreto').value;
+            const btn = document.querySelector('#pantallaLogin button');
+            const errorMsg = document.getElementById('errorLogin');
+            
             if(!id || !pin) return;
 
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { headers });
-            const data = await res.json();
+            // Ocultamos el error de antes y cambiamos el botón
+            errorMsg.classList.add('hidden');
+            const textoOriginal = btn.innerText;
+            btn.innerText = "Comprobando...";
+            btn.disabled = true;
 
-            if (data.length === 0) {
-                document.getElementById('errorLogin').classList.remove('hidden');
-            } else {
-                usuarioActual = data[0];
-                document.getElementById('pantallaLogin').classList.add('hidden');
-                
-                if (usuarioActual.es_admin) {
-                    document.getElementById('pantallaAdmin').classList.remove('hidden');
-                    cargarPanelJefe();
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}&pin=eq.${pin}&select=*`, { headers });
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    // PIN incorrecto de verdad
+                    errorMsg.classList.remove('hidden');
+                    btn.innerText = textoOriginal;
+                    btn.disabled = false;
                 } else {
-                    document.getElementById('pantallaAmigos').classList.remove('hidden');
-                    cargarViajesAmigos();
+                    // PIN correcto, ¡pa' dentro!
+                    usuarioActual = data[0];
+                    document.getElementById('pantallaLogin').classList.add('hidden');
+                    
+                    if (usuarioActual.es_admin) {
+                        document.getElementById('pantallaAdmin').classList.remove('hidden');
+                        cargarPanelJefe();
+                    } else {
+                        document.getElementById('pantallaAmigos').classList.remove('hidden');
+                        cargarViajesAmigos();
+                    }
                 }
+            } catch (error) {
+                alert("Error de conexión");
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
             }
+        }
         }
 
         function cerrarSesion() { location.reload(); }
