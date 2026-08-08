@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservas FCom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-md p-8">
+        <h1 class="text-3xl font-bold text-center text-slate-800 mb-8">
+            🚗 Reservas FCom
+        </h1>
+        
+        <div class="mb-6">
+            <label class="block text-sm font-bold text-slate-700 mb-2">Selecciona tu nombre:</label>
+            <select id="selectorUsuario" class="w-full border-2 border-slate-200 rounded-xl p-4 text-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium" onchange="cargarEstado()">
+                <option value="">Cargando amigos...</option>
+            </select>
+        </div>
+
+        <div id="panelBotones" class="hidden space-y-4 mt-8">
+            <div id="estadoActual" class="text-center p-4 rounded-xl mb-6 font-bold text-lg">
+                <!-- Aquí saldrá el estado -->
+            </div>
+
+            <button onclick="reservar(true)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-5 rounded-2xl shadow-lg transition-transform transform active:scale-95 text-lg">
+                ✅ ¡VOY A LA FCOM!
+            </button>
+            
+            <button onclick="reservar(false)" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-5 rounded-2xl shadow-lg transition-transform transform active:scale-95 text-lg">
+                ❌ Hoy no voy
+            </button>
+        </div>
+        
+        <p id="mensaje" class="text-center mt-6 text-base font-bold text-emerald-600 hidden transition-all">
+            🎉 ¡Guardado correctamente!
+        </p>
+    </div>
+
+    <script>
+        // ======= TUS DATOS DE SUPABASE =======
+        const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
+        
+        // ABAJO: Borra "TU_CLAVE_PUBLICA_AQUI" (manteniendo las comillas) y pega tu llave Publishable de Supabase
+        const SUPABASE_ANON_KEY = "TU_CLAVE_PUBLICA_AQUI"; 
+        // =====================================
+
+        const headers = {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+        };
+
+        let usuariosData = [];
+
+        async function cargarUsuarios() {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?es_admin=eq.false&select=id,nombre,viaja_hoy`, { headers });
+                usuariosData = await res.json();
+                
+                const selector = document.getElementById('selectorUsuario');
+                selector.innerHTML = '<option value="">Elige tu nombre...</option>';
+                
+                usuariosData.forEach(user => {
+                    selector.innerHTML += `<option value="${user.id}">${user.nombre}</option>`;
+                });
+            } catch (error) {
+                alert("Error conectando con la base de datos.");
+            }
+        }
+
+        function cargarEstado() {
+            const idSeleccionado = document.getElementById('selectorUsuario').value;
+            const panel = document.getElementById('panelBotones');
+            const divEstado = document.getElementById('estadoActual');
+            
+            if (!idSeleccionado) {
+                panel.classList.add('hidden');
+                return;
+            }
+
+            panel.classList.remove('hidden');
+            const usuario = usuariosData.find(u => u.id == idSeleccionado);
+            
+            if (usuario.viaja_hoy) {
+                divEstado.className = "text-center p-4 rounded-xl mb-6 font-bold text-lg bg-emerald-100 text-emerald-700 border-2 border-emerald-200";
+                divEstado.innerHTML = "Estado actual: VIAJAS HOY";
+            } else {
+                divEstado.className = "text-center p-4 rounded-xl mb-6 font-bold text-lg bg-rose-100 text-rose-700 border-2 border-rose-200";
+                divEstado.innerHTML = "Estado actual: NO VIAJAS";
+            }
+        }
+
+        async function reservar(viaja) {
+            const id = document.getElementById('selectorUsuario').value;
+            if(!id) return;
+
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: headers,
+                    body: JSON.stringify({ viaja_hoy: viaja })
+                });
+                
+                const usuario = usuariosData.find(u => u.id == id);
+                usuario.viaja_hoy = viaja;
+                cargarEstado();
+
+                const msg = document.getElementById('mensaje');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+                
+            } catch (error) {
+                alert("Error al guardar.");
+            }
+        }
+
+        cargarUsuarios();
+    </script>
+</body>
+</html>
