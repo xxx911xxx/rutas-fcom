@@ -397,20 +397,41 @@
         }
 
         // ==========================================
-        // FUNCIONES DE AMIGOS MULTI-RESERVA Y CANCELACIONES
+        // FUNCIONES DE AMIGOS CON INDICADOR VISUAL EN CALENDARIO
         // ==========================================
         async function cargarViajesAmigos() {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
-            const viajes = await res.json();
+            // Traer viajes abiertos
+            const resViajes = await fetch(`${SUPABASE_URL}/rest/v1/viajes?estado=eq.abierto&fecha=gte.${hoyString()}&order=fecha.asc`, { headers, cache: 'no-store' });
+            const viajes = await resViajes.json();
+            
+            // Traer las reservas del usuario actual para saber qué días tiene cogidos
+            const resMisReservas = await fetch(`${SUPABASE_URL}/rest/v1/reservas?usuario_id=eq.${usuarioActual.id}&select=viaje_id`, { headers, cache: 'no-store' });
+            const misReservas = await resMisReservas.json();
+            const misViajesIds = misReservas.map(r => r.viaje_id);
+
             const cal = document.getElementById('calendarioViajes');
             cal.innerHTML = '';
+            
             viajes.forEach(v => {
                 const f = new Date(v.fecha.split('T')[0] + 'T12:00:00');
+                const esMio = misViajesIds.includes(v.id);
+
+                let baseClasses = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all shadow-sm relative ";
+                if (esMio) {
+                    baseClasses += "border-blue-400 bg-blue-50 hover:border-blue-500";
+                } else {
+                    baseClasses += "border-slate-200 bg-white hover:border-emerald-500";
+                }
+
+                // El mini-indicador flotante tipo notificación
+                const indicador = esMio ? `<div class="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] w-6 h-6 flex items-center justify-center rounded-full font-bold shadow-sm border-2 border-white">🚗</div>` : '';
+
                 cal.innerHTML += `
-                    <button id="btn_dia_${v.id}" onclick="seleccionarDia('${v.id}')" class="dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm">
-                        <span class="text-xs font-bold text-slate-400">${f.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()}</span>
-                        <span class="text-2xl font-black text-slate-700">${f.getDate()}</span>
-                        <span class="text-xs font-bold text-slate-500">${f.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase()}</span>
+                    <button id="btn_dia_${v.id}" data-es-mio="${esMio}" onclick="seleccionarDia('${v.id}')" class="${baseClasses}">
+                        ${indicador}
+                        <span class="text-xs font-bold ${esMio ? 'text-blue-500' : 'text-slate-400'}">${f.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase()}</span>
+                        <span class="text-2xl font-black ${esMio ? 'text-blue-700' : 'text-slate-700'}">${f.getDate()}</span>
+                        <span class="text-xs font-bold ${esMio ? 'text-blue-500' : 'text-slate-500'}">${f.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase()}</span>
                     </button>`;
             });
         }
@@ -430,10 +451,18 @@
 
             document.querySelectorAll('.dia-btn').forEach(btn => {
                 const idBtn = btn.id.replace('btn_dia_', '');
+                const esMio = btn.getAttribute('data-es-mio') === 'true';
+                
+                let baseClasses = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all shadow-sm relative ";
+
                 if (viajesSeleccionados.includes(idBtn)) {
-                    btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 transition-all shadow-sm transform scale-105";
+                    btn.className = baseClasses + "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200 transform scale-105";
                 } else {
-                    btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm";
+                    if (esMio) {
+                        btn.className = baseClasses + "border-blue-400 bg-blue-50 hover:border-blue-500";
+                    } else {
+                        btn.className = baseClasses + "border-slate-200 bg-white hover:border-emerald-500";
+                    }
                 }
             });
 
@@ -546,7 +575,13 @@
                 }
 
                 mostrarToast("🗑️ Reserva cancelada con éxito. 1€ devuelto.", "exito");
-                cargarCoche();
+                
+                // Refrescar el calendario (quitará el icono del cochecito automáticamente) y vaciar selección
+                viajesSeleccionados = [];
+                document.getElementById('contadorDias').classList.add('hidden');
+                document.getElementById('mapaCoche').classList.add('hidden');
+                document.getElementById('zonaCancelar').classList.add('hidden');
+                cargarViajesAmigos();
 
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const miNombre = usuarioActual.nombre.split(" ")[0];
@@ -588,10 +623,11 @@
 
                 mostrarToast(`🚗 ¡${costeTotal} asiento(s) reservado(s) con éxito!`, "exito");
                 
+                // Refrescar el calendario (pondrá el icono del cochecito automáticamente) y vaciar selección
                 viajesSeleccionados = [];
                 document.getElementById('contadorDias').classList.add('hidden');
-                document.querySelectorAll('.dia-btn').forEach(btn => btn.className = "dia-btn flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-500 transition-all shadow-sm");
                 document.getElementById('mapaCoche').classList.add('hidden');
+                cargarViajesAmigos();
 
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
