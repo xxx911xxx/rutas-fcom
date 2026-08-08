@@ -266,7 +266,7 @@
             });
         }
 
-        // FUNCION RESERVAR MEJORADA CON WHATSAPP Y CONTROL DE ERRORES
+      // FUNCION RESERVAR (Detector de errores real)
         async function reservarSitio(asiento) {
             if(!viajeSeleccionado) return;
 
@@ -278,7 +278,9 @@
                 });
 
                 if (!res.ok) {
-                    alert("❌ Error: Supabase ha bloqueado la reserva. Asegúrate de haber quitado el candado (RLS) en la tabla 'reservas'.");
+                    // AQUÍ ESTÁ LA MAGIA: Leemos el error real de Supabase
+                    const errorReal = await res.json();
+                    alert("❌ El error real de Supabase es:\n\n" + JSON.stringify(errorReal, null, 2));
                     return;
                 }
 
@@ -297,19 +299,16 @@
                     'atras_der': 'Atrás Derecha 👉'
                 };
                 
-                // Extraer el texto del botón de la fecha elegida
                 const btnDia = document.getElementById(`btn_dia_${viajeSeleccionado}`);
                 const textoDia = btnDia ? btnDia.innerText.replace(/\n/g, ' ') : 'ese día';
                 const miNombre = usuarioActual.nombre.split(" ")[0];
 
-                // Crear el mensaje
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
                 
-                // Abrir la app de WhatsApp con el texto preparado
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank');
                 
             } catch(e) { 
-                alert("Error de conexión al intentar reservar."); 
+                alert("Error de red al intentar reservar."); 
             }
         }
 
