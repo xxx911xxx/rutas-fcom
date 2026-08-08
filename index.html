@@ -91,7 +91,7 @@
                 </button>
             </div>
             
-            <!-- Zona de Cancelación de Reserva (Aparece dinámicamente) -->
+            <!-- Zona de Cancelación de Reserva -->
             <div id="zonaCancelar" class="mt-6 hidden border-t-2 border-slate-200 pt-6"></div>
         </div>
     </div>
@@ -451,7 +451,6 @@
             mapa.classList.remove('hidden');
             zonaCancelar.classList.add('hidden');
 
-            // 1. Reset visual de asientos
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
                 btn.className = `asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center cursor-pointer hover:bg-emerald-200 shadow-sm`;
@@ -459,7 +458,6 @@
                 btn.querySelector('.libre-txt').innerText = "Libre";
             });
 
-            // 2. Traer reservas
             const filter = viajesSeleccionados.join(',');
             const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas?viaje_id=in.(${filter})&select=*`, { headers, cache: 'no-store' });
             const reservasMultiples = await res.json();
@@ -468,25 +466,30 @@
             let tengoReservaEnSeleccion = false;
 
             reservasMultiples.forEach(r => {
-                if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = { nombres: [], soyYo: false };
+                if(!asientosOcupados[r.asiento]) asientosOcupados[r.asiento] = { countMios: 0, nombres: [] };
+                
                 const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
                 asientosOcupados[r.asiento].nombres.push(usr ? usr.nombre.split(" ")[0] : 'Ocupado');
+                
                 if (r.usuario_id === usuarioActual.id) {
-                    asientosOcupados[r.asiento].soyYo = true;
+                    asientosOcupados[r.asiento].countMios++;
                     tengoReservaEnSeleccion = true;
                 }
             });
 
-            // 3. Pintar asientos
             ['copiloto', 'atras_izq', 'atras_cen', 'atras_der'].forEach(id => {
                 const btn = document.getElementById(`asiento_${id}`);
                 const dataAsiento = asientosOcupados[id];
 
                 if (dataAsiento) {
-                    if (dataAsiento.soyYo) {
+                    if (dataAsiento.countMios === viajesSeleccionados.length) {
                         btn.className = `bg-blue-100 border-2 border-blue-500 text-blue-700 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center shadow-sm transform scale-105`;
                         btn.querySelector('.libre-txt').innerText = "Tu sitio";
                         btn.disabled = true;
+                    } else if (dataAsiento.countMios > 0) {
+                        btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
+                        btn.disabled = true;
+                        btn.querySelector('.libre-txt').innerText = "Tuyo algún día";
                     } else {
                         btn.className = `bg-slate-100 border-2 border-slate-300 text-slate-500 p-3 rounded-2xl text-center font-bold text-sm ${id==='copiloto'?'h-24':'h-20'} flex flex-col justify-center items-center opacity-70 cursor-not-allowed`;
                         btn.disabled = true;
@@ -499,7 +502,7 @@
                 }
             });
 
-            // 4. LÓGICA DE CANCELACIÓN (Solo si selecciona 1 solo día y tiene reserva)
+            // LÓGICA DE CANCELACIÓN
             const miReserva = reservasMultiples.find(r => r.usuario_id === usuarioActual.id);
             if (viajesSeleccionados.length === 1 && miReserva) {
                 const resV = await fetch(`${SUPABASE_URL}/rest/v1/viajes?id=eq.${viajesSeleccionados[0]}&select=fecha`, { headers, cache: 'no-store' });
