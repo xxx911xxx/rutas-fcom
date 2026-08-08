@@ -21,8 +21,8 @@ async function generarRuta() {
     const paradas = pasajeros.map(p => `${p.latitud},${p.longitud}`).join('|');
     
     // Tu casa (Asegúrate de poner tus coordenadas reales aquí, he puesto unas de Sevilla Centro de ejemplo)
-    const MI_CASA = "37.400314, -5.941991"; 
-    const FCOM = "37.41027876546175, -6.006432374677381"; // Coordenadas aproximadas de la FCom en la Cartuja
+    const MI_CASA = "37.400314,-5.941991"; 
+    const FCOM = "37.41027876546175,-6.006432374677381"; // Coordenadas aproximadas de la FCom en la Cartuja
 
     // 4. Creamos el enlace mágico
     const enlaceGoogleMaps = `https://www.google.com/maps/dir/?api=1&origin=${MI_CASA}&destination=${FCOM}&waypoints=${paradas}`;
