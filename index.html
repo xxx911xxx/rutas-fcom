@@ -8,8 +8,8 @@
     <style>
         .asiento { transition: all 0.2s; }
         .asiento:active { transform: scale(0.95); }
-        #modalCartera { transition: opacity 0.3s ease; }
-        #modalCartera > div { transition: transform 0.3s ease; }
+        #modalCartera, #modalNormas { transition: opacity 0.3s ease; }
+        #modalCartera > div, #modalNormas > div { transition: transform 0.3s ease; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
@@ -34,7 +34,6 @@
         
         <div class="mb-6">
             <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">💰 Cuentas y Bizums</h2>
-            <!-- Aquí se cargarán los saldos con nombre y apellidos -->
             <div id="listaSaldosAdmin" class="grid grid-cols-2 gap-2"></div>
         </div>
 
@@ -57,9 +56,10 @@
     <div id="pantallaAmigos" class="max-w-md mx-auto bg-white rounded-3xl shadow-xl p-6 mt-10 hidden relative">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-emerald-600">🚗 Elige tu sitio</h1>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+                <button onclick="abrirNormas()" class="bg-slate-50 text-slate-600 px-3 py-1.5 rounded-lg font-bold text-sm shadow-sm border border-slate-200 hover:bg-slate-100 transition-all">📜</button>
                 <button onclick="abrirCartera()" class="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold text-sm shadow-sm border border-emerald-200 hover:bg-emerald-100 transition-all flex items-center gap-1">💳 Cartera</button>
-                <button onclick="cerrarSesion()" class="text-slate-500 underline text-sm font-bold">Salir</button>
+                <button onclick="cerrarSesion()" class="text-slate-400 hover:text-slate-600 ml-1 text-sm font-bold"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg></button>
             </div>
         </div>
         
@@ -92,8 +92,45 @@
                 </button>
             </div>
             
+            <p class="text-[10px] text-slate-400 text-center mt-6">Al hacer clic en un asiento libre, aceptas las <button onclick="abrirNormas()" class="underline font-bold text-slate-500">Normas del Vehículo</button>.</p>
+
             <!-- Zona de Cancelación de Reserva -->
-            <div id="zonaCancelar" class="mt-6 hidden border-t-2 border-slate-200 pt-6"></div>
+            <div id="zonaCancelar" class="mt-4 hidden border-t-2 border-slate-200 pt-6"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE LAS NORMAS (NUEVO) -->
+    <div id="modalNormas" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-end sm:items-center z-50 p-4 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform translate-y-full sm:translate-y-0">
+            <div class="bg-amber-400 p-5 text-amber-950 flex justify-between items-center">
+                <h2 class="font-black text-xl tracking-wide">📜 Normas del Coche</h2>
+                <button onclick="cerrarNormas()" class="text-amber-900 hover:text-black font-black text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 max-h-96 overflow-y-auto space-y-4 text-sm text-slate-600">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">🔁 Viaje Completo</h3>
+                    <p>La reserva de tu asiento de 1€ incluye <strong>tanto la ida a FCom como la vuelta</strong>. Es un paquete indivisible.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">⏱️ Regla de los 5 Minutos</h3>
+                    <p>Puntualidad británica. Desde que el conductor (Yisu) avisa de que está en el punto de recogida, hay un <strong>tiempo de cortesía máximo de 5 minutos</strong>. Pasado ese tiempo, el coche arranca sin ti (y no se devuelve el euro).</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">❌ Cancelaciones de Pasajeros</h3>
+                    <p>Si te surge un imprevisto, puedes cancelar tu reserva desde la web y recuperar tu euro automáticamente. <strong>El límite para cancelar es de 48 horas</strong> antes de la hora del viaje. Después, la opción desaparece.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">⚠️ Cancelación del Conductor</h3>
+                    <p>Si por fuerza mayor el conductor falla y no puede hacer el viaje, os avisará con antelación por WhatsApp y <strong>vuestro euro será reembolsado</strong> automáticamente a la cartera. ¡Cosas que pasan!</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base">🧼 Respeto en cabina</h3>
+                    <p>Se ruega no comer cosas que manchen o dejen olores fuertes en el coche. El piloto elige la música, pero se aceptan sugerencias.</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 text-center">
+                <button onclick="cerrarNormas()" class="bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold py-2 px-6 rounded-xl w-full active:scale-95 transition-transform">Entendido 👍</button>
+            </div>
         </div>
     </div>
 
@@ -273,6 +310,24 @@
         }
 
         // ==========================================
+        // LAS NORMAS DEL VEHÍCULO
+        // ==========================================
+        function abrirNormas() {
+            const modal = document.getElementById('modalNormas');
+            const contenido = modal.querySelector('div');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); contenido.classList.remove('translate-y-full'); }, 10);
+        }
+
+        function cerrarNormas() {
+            const modal = document.getElementById('modalNormas');
+            const contenido = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            contenido.classList.add('translate-y-full');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        // ==========================================
         // FUNCIONES SÚPER JEFE (ADMIN)
         // ==========================================
         async function añadirSaldo(userId, name) {
@@ -296,7 +351,6 @@
                 const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const dataU = await resU.json();
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 }) });
-                
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' }) });
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
@@ -335,8 +389,6 @@
             usuariosGlobal.forEach(u => {
                 if(u.id === usuarioActual.id) return; 
                 let colorSaldo = u.saldo <= 0 ? 'text-rose-500' : (u.saldo === 1 ? 'text-orange-500' : 'text-slate-500');
-                
-                // AQUÍ EL CAMBIO: u.nombre en vez de u.nombre.split(" ")[0]
                 listaSaldos.innerHTML += `
                     <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                         <div class="truncate mr-2"><p class="font-bold text-sm truncate">${u.nombre}</p><p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p></div>
