@@ -266,7 +266,6 @@
             });
         }
 
-      // FUNCION RESERVAR (Detector de errores real)
         async function reservarSitio(asiento) {
             if(!viajeSeleccionado) return;
 
@@ -274,21 +273,23 @@
                 const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
                     method: 'POST', 
                     headers, 
-                    body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento }) 
+                    // COSTE ACTUALIZADO A 1€
+                    body: JSON.stringify({ 
+                        viaje_id: viajeSeleccionado, 
+                        usuario_id: usuarioActual.id, 
+                        asiento: asiento,
+                        coste_cobrado: 1 
+                    }) 
                 });
 
                 if (!res.ok) {
-                    // AQUÍ ESTÁ LA MAGIA: Leemos el error real de Supabase
-                    const errorReal = await res.json();
-                    alert("❌ El error real de Supabase es:\n\n" + JSON.stringify(errorReal, null, 2));
+                    alert("❌ Error al guardar la reserva en la base de datos. Revisa tu conexión.");
                     return;
                 }
 
-                // Mostrar éxito visual
                 document.getElementById('mensajeReserva').classList.remove('hidden');
                 setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
                 
-                // Recargar el mapa para que el asiento se ponga gris
                 cargarCoche(); 
 
                 // --- MAGIA WHATSAPP ---
