@@ -88,7 +88,6 @@
 
     <script>
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
-        // Tu clave de Supabase
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
         
         const headers = {
@@ -124,7 +123,6 @@
         async function iniciarSesion() {
             const errorMsg = document.getElementById('errorLogin');
             const btn = document.querySelector('#pantallaLogin button');
-            
             errorMsg.classList.add('hidden');
 
             const id = document.getElementById('selectorUsuario').value;
@@ -159,7 +157,6 @@
                 const pinSoloNumerosWeb = String(pinInput).replace(/\D/g, '');
 
                 if (pinSoloNumerosDB !== pinSoloNumerosWeb) {
-                    // YA NO HAY CHIVATO. Mensaje genérico por seguridad.
                     errorMsg.innerText = `❌ PIN incorrecto. Inténtalo de nuevo.`;
                     errorMsg.classList.remove('hidden');
                     btn.innerText = textoOriginal;
@@ -178,7 +175,6 @@
                     document.getElementById('pantallaAmigos').classList.remove('hidden');
                     cargarViajesAmigos();
                 }
-                
             } catch (error) {
                 errorMsg.innerText = "📡 Error de red.";
                 errorMsg.classList.remove('hidden');
@@ -270,12 +266,51 @@
             });
         }
 
+        // FUNCION RESERVAR MEJORADA CON WHATSAPP Y CONTROL DE ERRORES
         async function reservarSitio(asiento) {
             if(!viajeSeleccionado) return;
-            await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { method: 'POST', headers, body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento }) });
-            document.getElementById('mensajeReserva').classList.remove('hidden');
-            setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
-            cargarCoche(); 
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { 
+                    method: 'POST', 
+                    headers, 
+                    body: JSON.stringify({ viaje_id: viajeSeleccionado, usuario_id: usuarioActual.id, asiento: asiento }) 
+                });
+
+                if (!res.ok) {
+                    alert("❌ Error: Supabase ha bloqueado la reserva. Asegúrate de haber quitado el candado (RLS) en la tabla 'reservas'.");
+                    return;
+                }
+
+                // Mostrar éxito visual
+                document.getElementById('mensajeReserva').classList.remove('hidden');
+                setTimeout(() => document.getElementById('mensajeReserva').classList.add('hidden'), 3000);
+                
+                // Recargar el mapa para que el asiento se ponga gris
+                cargarCoche(); 
+
+                // --- MAGIA WHATSAPP ---
+                const nombresAsientos = {
+                    'copiloto': 'Copiloto 🚘',
+                    'atras_izq': 'Atrás Izquierda 👈',
+                    'atras_cen': 'Atrás Medio 🧍',
+                    'atras_der': 'Atrás Derecha 👉'
+                };
+                
+                // Extraer el texto del botón de la fecha elegida
+                const btnDia = document.getElementById(`btn_dia_${viajeSeleccionado}`);
+                const textoDia = btnDia ? btnDia.innerText.replace(/\n/g, ' ') : 'ese día';
+                const miNombre = usuarioActual.nombre.split(" ")[0];
+
+                // Crear el mensaje
+                const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para el viaje del *${textoDia}*. ¡Nos vemos!`;
+                
+                // Abrir la app de WhatsApp con el texto preparado
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`, '_blank');
+                
+            } catch(e) { 
+                alert("Error de conexión al intentar reservar."); 
+            }
         }
 
         init();
