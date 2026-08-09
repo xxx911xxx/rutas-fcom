@@ -77,7 +77,7 @@
             <div class="text-center font-bold text-slate-400 mb-4">PARTE DELANTERA</div>
             <div class="grid grid-cols-2 gap-6 mb-6">
                 <div class="bg-slate-800 text-white p-4 rounded-2xl text-center font-bold flex flex-col justify-center opacity-80 cursor-not-allowed h-24">
-                    <span>Volante 🚘</span><span class="text-xs font-normal">Yisu (Tú)</span>
+                    <span>Volante 🚘</span><span class="text-xs font-normal">Jysus</span>
                 </div>
                 <button id="asiento_copiloto" onclick="reservarSitio('copiloto')" class="asiento bg-emerald-100 border-2 border-emerald-500 text-emerald-700 p-4 rounded-2xl text-center font-bold h-24 shadow-sm">
                     <span>Copiloto</span><span class="block text-xs font-normal mt-1 libre-txt">Libre</span>
@@ -137,7 +137,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">😴 Cláusula "Humano al Volante"</h3>
-                    <p>El conductor no es un tren y las alarmas a veces fallan. Si a la hora acordada el coche no está y Yisu no da señales de vida en 10 minutos, <strong>activad el Plan B</strong>. El viaje quedará cancelado y el euro volverá a vuestra cuenta. ¡Mil perdones si ocurre!</p>
+                    <p>El conductor no es un tren y las alarmas a veces fallan. Si a la hora acordada el coche no está y Jysus no da señales de vida en 10 minutos, <strong>activad el Plan B</strong>. El viaje quedará cancelado y el euro volverá a vuestra cuenta. ¡Mil perdones si ocurre!</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">🚭 Respeto en cabina</h3>
@@ -249,7 +249,7 @@
         // Contactar Jefe (Botón de Ayuda 💬)
         function contactarJefe() {
             const miNombre = usuarioActual ? usuarioActual.nombre.split(" ")[0] : '';
-            const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Te escribo porque tengo una duda/problema con la app del coche: `;
+            const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Te escribo porque tengo una duda/problema con la app del coche: `;
             // Cambia el "34674596477" si fuera necesario para asegurarnos de que va a tu número
             const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensaje)}`;
             window.location.href = url;
@@ -457,7 +457,7 @@
                 const data = await res.json();
                 const nuevoSaldo = (data[0].saldo || 0) + parseFloat(extra);
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Yisu' }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: parseFloat(extra), tipo: 'Recarga de Jysus' }) });
                 mostrarToast(`💸 Recarga completada. ${name} tiene ${nuevoSaldo}€.`, "exito");
                 cargarPanelJefe(); 
             } catch(e) { mostrarToast("❌ Error al recargar saldo.", "error"); }
@@ -470,7 +470,7 @@
                 const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const dataU = await resU.json();
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 }) });
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Yisu)' }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Jysus)' }) });
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
             } catch(e) { mostrarToast("❌ Error al eliminar pasajero.", "error"); }
@@ -739,7 +739,7 @@
                     } else {
                         zonaCancelar.innerHTML = `<div class="bg-slate-100 text-slate-500 border-2 border-slate-300 font-bold py-3 rounded-2xl text-center shadow-sm text-sm flex flex-col">
                             <span>🔒 Faltan menos de 48h</span>
-                            <span class="text-xs font-normal">Ya no se puede cancelar por la web. Avisa a Yisu.</span>
+                            <span class="text-xs font-normal">Ya no se puede cancelar por la web. Avisa a Jysus.</span>
                         </div>`;
                     }
                     zonaCancelar.classList.remove('hidden');
@@ -770,7 +770,7 @@
 
                 const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const miNombre = usuarioActual.nombre.split(" ")[0];
-                const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
+                const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
 
                 abrirWhatsApp(mensaje, 1500);
             } catch(e) { mostrarToast("❌ Error al cancelar reserva.", "error"); }
@@ -797,7 +797,7 @@
 
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
-                const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
+                const mensajeRecarga = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
                 abrirWhatsApp(mensajeRecarga, 1800);
                 return; 
             }
