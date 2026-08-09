@@ -99,7 +99,7 @@
         </div>
     </div>
 
-<!-- MODAL DE LAS NORMAS (CON CLÁUSULA ANTI-SUEÑO) -->
+    <!-- MODAL DE LAS NORMAS -->
     <div id="modalNormas" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-end sm:items-center z-50 p-4 opacity-0">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform translate-y-full sm:translate-y-0">
             <div class="bg-amber-400 p-5 text-amber-950 flex justify-between items-center">
@@ -125,7 +125,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">👮 Seguridad y Cinturón</h3>
-                    <p>El uso del <strong>cinturón es innegociable</strong> en todos los asientos.</p>
+                    <p>El uso del cinturón es innegociable en todos los asientos. <strong>Las multas por no llevarlo puesto correrán a cargo del despistado</strong>, en ningún caso del conductor.</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">❌ Cancelaciones de Pasajeros</h3>
@@ -655,8 +655,29 @@
 
         async function reservarSitio(asiento) {
             if(viajesSeleccionados.length === 0) return;
+            
             const miNombre = usuarioActual.nombre.split(" ")[0];
             const costeTotal = viajesSeleccionados.length;
+            const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
+
+            // ===============================================
+            // NUEVO: SISTEMA DE CONFIRMACIÓN ANTES DE COBRAR
+            // ===============================================
+            let fechasTexto = [];
+            viajesSeleccionados.forEach(vId => {
+                const btnDia = document.getElementById(`btn_dia_${vId}`);
+                if (btnDia) {
+                    // Limpiamos los saltos de línea y el icono del cochecito
+                    const textoLimpio = btnDia.innerText.replace(/\n/g, ' ').replace('🚗', '').trim();
+                    fechasTexto.push(textoLimpio);
+                }
+            });
+            
+            const confirmacion = confirm(`❓ CONFIRMACIÓN DE RESERVA\n\nVas a reservar el asiento de ${nombresAsientos[asiento]} para ${costeTotal} día(s):\n📅 ${fechasTexto.join(' | ')}\n\n💸 Coste total: ${costeTotal}€\n\n¿Estás seguro de que quieres confirmar tu sitio?`);
+            
+            // Si le da a cancelar, cortamos la función aquí y no pasa nada
+            if (!confirmacion) return; 
+            // ===============================================
 
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
@@ -684,7 +705,6 @@
                 document.getElementById('mapaCoche').classList.add('hidden');
                 cargarViajesAmigos();
 
-                const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
                 
                 if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
