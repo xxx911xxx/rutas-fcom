@@ -184,7 +184,7 @@
         let viajesSeleccionados = [];
 
         // ==========================================
-        // SISTEMA DE TOASTS
+        // SISTEMA DE TOASTS Y REDIRECCIONES INTELIGENTES
         // ==========================================
         function mostrarToast(mensaje, tipo = 'exito') {
             let container = document.getElementById('toast-container');
@@ -205,6 +205,23 @@
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3500); 
+        }
+
+        // Esta función soluciona la guerra entre Safari (iPhone) y Chrome (Android/Pixel)
+        function abrirWhatsApp(mensajeTexto, delay) {
+            setTimeout(() => {
+                // Usamos el enlace wa.me que es más universal para móviles
+                const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensajeTexto)}`;
+                
+                // Intentamos abrirlo en pestaña nueva (Le encanta a Android/Pixel, lo odia iOS)
+                let win = window.open(url, '_blank');
+                
+                // Si el navegador bloqueó la pestaña (Safari en iOS devuelve null/undefined)
+                // Usamos el Plan B para forzar la navegación en la misma pestaña
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.location.href = url;
+                }
+            }, delay);
         }
 
         function hoyString() {
@@ -648,9 +665,7 @@
                 const miNombre = usuarioActual.nombre.split(" ")[0];
                 const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
 
-                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone en la cancelación
-                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`; }, 1500);
-
+                abrirWhatsApp(mensaje, 1500);
             } catch(e) { mostrarToast("❌ Error al cancelar reserva.", "error"); }
         }
 
@@ -671,14 +686,12 @@
             });
             
             const confirmacion = confirm(`❓ CONFIRMACIÓN DE RESERVA\n\nVas a reservar el asiento de ${nombresAsientos[asiento]} para ${costeTotal} día(s):\n📅 ${fechasTexto.join(' | ')}\n\n💸 Coste total: ${costeTotal}€\n\n¿Estás seguro de que quieres confirmar tu sitio?`);
-            
             if (!confirmacion) return; 
 
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
                 const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
-                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone si no hay saldo
-                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`; }, 1800);
+                abrirWhatsApp(mensajeRecarga, 1800);
                 return; 
             }
 
@@ -705,8 +718,7 @@
                 
                 if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
                 
-                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone en la confirmación
-                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`; }, 1800);
+                abrirWhatsApp(mensaje, 1800);
             } catch(e) { mostrarToast("📡 Error de red al procesar las reservas.", "error"); }
         }
 
