@@ -8,8 +8,8 @@
     <style>
         .asiento { transition: all 0.2s; }
         .asiento:active { transform: scale(0.95); }
-        #modalCartera, #modalNormas, #modalEditarUsuario { transition: opacity 0.3s ease; }
-        #modalCartera > div, #modalNormas > div, #modalEditarUsuario > div { transition: transform 0.3s ease; }
+        #modalCartera, #modalNormas, #modalEditarUsuario, #modalInfoPublica { transition: opacity 0.3s ease; }
+        #modalCartera > div, #modalNormas > div, #modalEditarUsuario > div, #modalInfoPublica > div { transition: transform 0.3s ease; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
@@ -23,6 +23,16 @@
         <input type="password" inputmode="numeric" pattern="[0-9]*" id="pinSecreto" maxlength="4" placeholder="Tu PIN (4 cifras)" class="w-full border-2 border-slate-200 rounded-xl p-4 text-center text-2xl tracking-[1em] mb-6 outline-none font-bold">
         <button onclick="iniciarSesion()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg text-lg transition-all">Entrar</button>
         <p id="errorLogin" class="text-rose-500 text-center font-bold mt-4 hidden">PIN incorrecto.</p>
+
+        <!-- INFORMACIÓN PARA NUEVOS USUARIOS -->
+        <div class="mt-8 pt-6 border-t-2 border-slate-100 flex flex-col gap-4">
+            <button onclick="abrirModalInfo()" class="text-slate-500 hover:text-blue-600 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                ℹ️ ¿Qué es esta plataforma?
+            </button>
+            <button onclick="solicitarCuenta()" class="text-slate-500 hover:text-emerald-600 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                👋 ¿Aún no tienes cuenta?
+            </button>
+        </div>
     </div>
 
     <!-- PANTALLA 2: MODO SÚPER JEFE (ADMIN) -->
@@ -96,6 +106,33 @@
             </div>
             <p class="text-[10px] text-slate-400 text-center mt-6">Al hacer clic en un asiento libre, aceptas las <button onclick="abrirNormas()" class="underline font-bold text-slate-500">Normas del Vehículo</button>.</p>
             <div id="zonaCancelar" class="mt-4 hidden border-t-2 border-slate-200 pt-6"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE INFORMACIÓN PÚBLICA (NUEVO) -->
+    <div id="modalInfoPublica" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-end sm:items-center z-50 p-4 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transform translate-y-full sm:translate-y-0">
+            <div class="bg-blue-600 p-5 text-white flex justify-between items-center">
+                <h2 class="font-black text-xl tracking-wide">ℹ️ Sobre Rutas FCom</h2>
+                <button onclick="cerrarModalInfo()" class="text-blue-200 hover:text-white font-black text-3xl leading-none">&times;</button>
+            </div>
+            <div class="p-6 space-y-5 text-sm text-slate-600">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base mb-1">🚗 ¿Qué es esta plataforma?</h3>
+                    <p>Es una web privada para organizar los viajes diarios en coche a la Facultad de Comunicación (FCom). Los usuarios reservan su asiento en el coche, comparten los gastos del trayecto de forma transparente y ahorran tiempo de transporte público.</p>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-base mb-1">🔐 ¿Cómo me inscribo?</h3>
+                    <p>El acceso al vehículo es privado y funciona mediante un sistema de saldo virtual. Si eres estudiante o conoces al conductor y quieres unirte a las rutas, necesitas que se te cree un perfil oficial y un código PIN secreto.</p>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex flex-col gap-3">
+                <button onclick="solicitarCuenta()" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl w-full shadow-sm active:scale-95 transition-transform flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    Escribir a Jysus
+                </button>
+                <button onclick="cerrarModalInfo()" class="text-slate-400 hover:text-slate-600 font-bold py-2 transition-colors">Volver atrás</button>
+            </div>
         </div>
     </div>
 
@@ -320,6 +357,30 @@
         }
 
         function cerrarSesion() { location.reload(); }
+
+        // ==========================================
+        // INFORMACIÓN PÚBLICA (NUEVO)
+        // ==========================================
+        function abrirModalInfo() {
+            const modal = document.getElementById('modalInfoPublica');
+            const contenido = modal.querySelector('div');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); contenido.classList.remove('translate-y-full'); }, 10);
+        }
+
+        function cerrarModalInfo() {
+            const modal = document.getElementById('modalInfoPublica');
+            const contenido = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            contenido.classList.add('translate-y-full');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        function solicitarCuenta() {
+            const mensaje = "🚗 ¡Hola Jysus! He visto la web de Rutas FCom y me gustaría unirme para ir a la facultad contigo. ¿Me creas una cuenta y un PIN?";
+            const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensaje)}`;
+            window.location.href = url;
+        }
 
         // ==========================================
         // LA CARTERA VIRTUAL Y NORMAS
