@@ -109,7 +109,7 @@
             <div class="p-6 max-h-[70vh] overflow-y-auto space-y-4 text-sm text-slate-600">
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">🔁 Viaje Completo</h3>
-                    <p>La reserva de tu asiento de 1€ incluye <strong>tanto la ida a FCom como la vuelta</strong>. Es un paquete indivisible. El punto de recogida en la vuelta será exactamente el mismo donde se aparque el vehículo a la ida.</p>
+                    <p>La reserva de tu asiento de <strong>2€</strong> incluye <strong>tanto la ida a FCom como la vuelta</strong>. Es un paquete indivisible. El punto de recogida en la vuelta será exactamente el mismo donde se aparque el vehículo a la ida.</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">⏱️ Horario de salida</h3>
@@ -117,7 +117,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">⏳ Regla de los 5 Minutos</h3>
-                    <p>Puntualidad británica. Desde que el conductor avisa de que está abajo, hay un <strong>tiempo de cortesía máximo de 5 minutos</strong>. Pasado ese tiempo, el coche arranca sin ti (y no se devuelve el euro).</p>
+                    <p>Puntualidad británica. Desde que el conductor avisa de que está abajo, hay un <strong>tiempo de cortesía máximo de 5 minutos</strong>. Pasado ese tiempo, el coche arranca sin ti (y no se devuelven los 2€).</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">🎒 Mochilas y Espacio</h3>
@@ -129,15 +129,15 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">❌ Cancelaciones de Pasajeros</h3>
-                    <p>Si te surge un imprevisto, puedes cancelar tu reserva desde la web y recuperar tu euro automáticamente. <strong>El límite para cancelar es de 48 horas</strong> antes del viaje. Después, la opción desaparece.</p>
+                    <p>Si te surge un imprevisto, puedes cancelar tu reserva desde la web y <strong>recuperar tus 2€ automáticamente</strong>. El límite para cancelar es de 48 horas antes del viaje. Después, la opción desaparece.</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">⚠️ Cancelación del Conductor</h3>
-                    <p>Si por fuerza mayor el conductor falla, os avisará con antelación por WhatsApp y <strong>vuestro euro será reembolsado</strong> automáticamente a la cartera.</p>
+                    <p>Si por fuerza mayor el conductor falla, os avisará con antelación por WhatsApp y <strong>vuestros 2€ serán reembolsados</strong> automáticamente a la cartera.</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">😴 Cláusula "Humano al Volante"</h3>
-                    <p>El conductor no es un tren y las alarmas a veces fallan. Si a la hora acordada el coche no está y Jysus no da señales de vida en 10 minutos, <strong>activad el Plan B</strong>. El viaje quedará cancelado y el euro volverá a vuestra cuenta. ¡Mil perdones si ocurre!</p>
+                    <p>El conductor no es un tren y las alarmas a veces fallan. Si a la hora acordada el coche no está y Jysus no da señales de vida en 10 minutos, <strong>activad el Plan B</strong>. El viaje quedará cancelado y <strong>los 2€ volverán a vuestra cuenta</strong>. ¡Mil perdones si ocurre!</p>
                 </div>
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">🚭 Respeto en cabina</h3>
@@ -249,7 +249,7 @@
         // Contactar Jefe (Botón de Ayuda 💬)
         function contactarJefe() {
             const miNombre = usuarioActual ? usuarioActual.nombre.split(" ")[0] : '';
-            const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. `;
+            const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Te escribo porque tengo una duda/problema con la app del coche: `;
             // Cambia el "34674596477" si fuera necesario para asegurarnos de que va a tu número
             const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensaje)}`;
             window.location.href = url;
@@ -464,13 +464,13 @@
         }
 
         async function eliminarReserva(resId, userId, viajeId) {
-            if(!confirm("⚠️ ¿Quitar a este pasajero?\nSe liberará la plaza y se le devolverá 1€.")) return;
+            if(!confirm("⚠️ ¿Quitar a este pasajero?\nSe liberará la plaza y se le devolverán 2€.")) return;
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${resId}`, { method: 'DELETE', headers });
                 const resU = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}&select=saldo`, { headers, cache: 'no-store' });
                 const dataU = await resU.json();
-                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 1 }) });
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 1, tipo: 'Reembolso (Expulsado por Jysus)' }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${userId}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: dataU[0].saldo + 2 }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: userId, cantidad: 2, tipo: 'Reembolso (Expulsado por Jysus)' }) });
                 mostrarToast("🗑️ Pasajero eliminado y reembolsado.", "exito");
                 cargarPanelJefe();
             } catch(e) { mostrarToast("❌ Error al eliminar pasajero.", "error"); }
@@ -636,7 +636,8 @@
 
             const contador = document.getElementById('contadorDias');
             if (viajesSeleccionados.length > 0) {
-                contador.innerText = `${viajesSeleccionados.length} día(s) seleccionados (${viajesSeleccionados.length}€)`;
+                const coste = viajesSeleccionados.length * 2;
+                contador.innerText = `${viajesSeleccionados.length} día(s) seleccionados (${coste}€)`;
                 contador.classList.remove('hidden');
             } else {
                 contador.classList.add('hidden');
@@ -735,7 +736,7 @@
                     const horasFaltantes = (fechaViaje - ahora) / (1000 * 60 * 60);
 
                     if (horasFaltantes >= 48) {
-                        zonaCancelar.innerHTML = `<button onclick="cancelarMiReserva('${viajesSeleccionados[0]}', '${miReserva.id}', '${miReserva.asiento}', '${dataV[0].fecha}')" class="w-full bg-rose-50 text-rose-600 border-2 border-rose-500 hover:bg-rose-100 font-bold py-3 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"><span>❌</span> Cancelar mi reserva (Recuperar 1€)</button>`;
+                        zonaCancelar.innerHTML = `<button onclick="cancelarMiReserva('${viajesSeleccionados[0]}', '${miReserva.id}', '${miReserva.asiento}', '${dataV[0].fecha}')" class="w-full bg-rose-50 text-rose-600 border-2 border-rose-500 hover:bg-rose-100 font-bold py-3 rounded-2xl transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"><span>❌</span> Cancelar mi reserva (Recuperar 2€)</button>`;
                     } else {
                         zonaCancelar.innerHTML = `<div class="bg-slate-100 text-slate-500 border-2 border-slate-300 font-bold py-3 rounded-2xl text-center shadow-sm text-sm flex flex-col">
                             <span>🔒 Faltan menos de 48h</span>
@@ -748,19 +749,19 @@
         }
 
         async function cancelarMiReserva(viajeId, reservaId, asiento, fechaViajeRaw) {
-            if(!confirm("¿Seguro que quieres cancelar tu reserva?\nSe te devolverá 1€ pero perderás tu asiento.")) return;
+            if(!confirm("¿Seguro que quieres cancelar tu reserva?\nSe te devolverán 2€ pero perderás tu asiento.")) return;
             
             try {
                 await fetch(`${SUPABASE_URL}/rest/v1/reservas?id=eq.${reservaId}`, { method: 'DELETE', headers });
                 
-                const nuevoSaldo = usuarioActual.saldo + 1;
+                const nuevoSaldo = usuarioActual.saldo + 2;
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo;
                 
                 const fechaLimpia = new Date(fechaViajeRaw.split('T')[0] + 'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' });
-                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: 1, tipo: `Cancelación viaje ${fechaLimpia}` }) });
+                await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: 2, tipo: `Cancelación viaje ${fechaLimpia}` }) });
 
-                mostrarToast("🗑️ Reserva cancelada con éxito. 1€ devuelto.", "exito");
+                mostrarToast("🗑️ Reserva cancelada con éxito. 2€ devueltos.", "exito");
                 
                 viajesSeleccionados = [];
                 document.getElementById('contadorDias').classList.add('hidden');
@@ -780,7 +781,8 @@
             if(viajesSeleccionados.length === 0) return;
             
             const miNombre = usuarioActual.nombre.split(" ")[0];
-            const costeTotal = viajesSeleccionados.length;
+            const numDias = viajesSeleccionados.length;
+            const costeTotal = numDias * 2;
             const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
 
             let fechasTexto = [];
@@ -792,19 +794,19 @@
                 }
             });
             
-            const confirmacion = confirm(`❓ CONFIRMACIÓN DE RESERVA\n\nVas a reservar el asiento de ${nombresAsientos[asiento]} para ${costeTotal} día(s):\n📅 ${fechasTexto.join(' | ')}\n\n💸 Coste total: ${costeTotal}€\n\n¿Estás seguro de que quieres confirmar tu sitio?`);
+            const confirmacion = confirm(`❓ CONFIRMACIÓN DE RESERVA\n\nVas a reservar el asiento de ${nombresAsientos[asiento]} para ${numDias} día(s):\n📅 ${fechasTexto.join(' | ')}\n\n💸 Coste total: ${costeTotal}€\n\n¿Estás seguro de que quieres confirmar tu sitio?`);
             if (!confirmacion) return; 
 
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
-                const mensajeRecarga = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
+                const mensajeRecarga = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Necesito recargar saldo para reservar ${numDias} días (${costeTotal}€). 💸`;
                 abrirWhatsApp(mensajeRecarga, 1800);
                 return; 
             }
 
             try {
                 for(let vId of viajesSeleccionados) {
-                    await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 1 }) });
+                    await fetch(`${SUPABASE_URL}/rest/v1/reservas`, { method: 'POST', headers, body: JSON.stringify({ viaje_id: vId, usuario_id: usuarioActual.id, asiento: asiento, estado: 'confirmada', coste_cobrado: 2 }) });
                 }
 
                 const saldoOriginal = usuarioActual.saldo;
@@ -815,14 +817,14 @@
                 const conceptoHistorial = `🚗 Reserva: ${fechasTexto.join(' | ')}`;
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: conceptoHistorial }) });
 
-                mostrarToast(`🚗 ¡${costeTotal} asiento(s) reservado(s) con éxito!`, "exito");
+                mostrarToast(`🚗 ¡${numDias} asiento(s) reservado(s) con éxito!`, "exito");
                 
                 viajesSeleccionados = [];
                 document.getElementById('contadorDias').classList.add('hidden');
                 document.getElementById('mapaCoche').classList.add('hidden');
                 cargarViajesAmigos();
 
-                const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
+                const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${numDias} días* distintos. ¡Nos vemos!`;
                 
                 if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
                 
