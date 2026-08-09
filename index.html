@@ -8,8 +8,8 @@
     <style>
         .asiento { transition: all 0.2s; }
         .asiento:active { transform: scale(0.95); }
-        #modalCartera, #modalNormas { transition: opacity 0.3s ease; }
-        #modalCartera > div, #modalNormas > div { transition: transform 0.3s ease; }
+        #modalCartera, #modalNormas, #modalEditarUsuario { transition: opacity 0.3s ease; }
+        #modalCartera > div, #modalNormas > div, #modalEditarUsuario > div { transition: transform 0.3s ease; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen p-4 font-sans text-slate-800">
@@ -33,8 +33,8 @@
         </div>
         
         <div class="mb-6">
-            <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">💰 Cuentas y Bizums</h2>
-            <div id="listaSaldosAdmin" class="grid grid-cols-2 gap-2"></div>
+            <h2 class="font-black text-lg mb-3 flex items-center gap-2 text-slate-700">💰 Cuentas y Perfiles</h2>
+            <div id="listaSaldosAdmin" class="grid grid-cols-1 gap-3"></div>
         </div>
 
         <hr class="border-slate-300 mb-6">
@@ -91,10 +91,7 @@
                     <span>Der.</span><span class="block text-xs font-normal libre-txt">Libre</span>
                 </button>
             </div>
-            
             <p class="text-[10px] text-slate-400 text-center mt-6">Al hacer clic en un asiento libre, aceptas las <button onclick="abrirNormas()" class="underline font-bold text-slate-500">Normas del Vehículo</button>.</p>
-
-            <!-- Zona de Cancelación de Reserva -->
             <div id="zonaCancelar" class="mt-4 hidden border-t-2 border-slate-200 pt-6"></div>
         </div>
     </div>
@@ -168,6 +165,26 @@
         </div>
     </div>
 
+    <!-- MODAL DE EDITAR USUARIO (JEFE) -->
+    <div id="modalEditarUsuario" class="fixed inset-0 bg-slate-900/60 hidden flex justify-center items-center z-50 p-4 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 transform scale-95 transition-transform">
+            <h2 class="font-black text-xl mb-4 text-slate-800">✏️ Editar Perfil de <span id="nombreEditarUsuario" class="text-blue-600"></span></h2>
+            <input type="hidden" id="editUserId">
+            
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Teléfono Móvil</label>
+            <p class="text-[10px] text-slate-400 mb-2">Importante: Pon el código de país delante (Ej: 34600112233 para España)</p>
+            <input type="text" id="editUserPhone" placeholder="Ej: 34600112233" class="w-full border-2 border-slate-200 rounded-xl p-3 mb-4 outline-none focus:border-blue-400 font-medium">
+            
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Punto de Recogida / Calle</label>
+            <input type="text" id="editUserPunto" placeholder="Ej: Av. de la Paz, 4" class="w-full border-2 border-slate-200 rounded-xl p-3 mb-6 outline-none focus:border-blue-400 font-medium">
+            
+            <div class="flex gap-3">
+                <button onclick="cerrarModalEditar()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all">Cancelar</button>
+                <button onclick="guardarUsuario()" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-md">Guardar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = "https://wangfcwblatimxldtvva.supabase.co";
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbmdmY3dibGF0aW14bGR0dnZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMzc2MjUsImV4cCI6MjEwMTcxMzYyNX0.GLc2K37j8YURsJHf5mHdhP7dbPKvfIujNwiztafMg84"; 
@@ -184,7 +201,7 @@
         let viajesSeleccionados = [];
 
         // ==========================================
-        // SISTEMA DE TOASTS Y REDIRECCIONES INTELIGENTES
+        // SISTEMA DE TOASTS Y WHATSAPP
         // ==========================================
         function mostrarToast(mensaje, tipo = 'exito') {
             let container = document.getElementById('toast-container');
@@ -207,14 +224,23 @@
             }, 3500); 
         }
 
-        function abrirWhatsApp(mensajeTexto, delay) {
+        // WhatsApp General (Permite elegir a quién enviarlo)
+        function abrirWhatsApp(mensajeTexto, delay = 0) {
             setTimeout(() => {
-                const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensajeTexto)}`;
-                let win = window.open(url, '_blank');
-                if (!win || win.closed || typeof win.closed === 'undefined') {
-                    window.location.href = url;
-                }
+                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeTexto)}`;
+                window.location.href = url;
             }, delay);
+        }
+
+        // WhatsApp Directo (Abre el chat con el número específico)
+        function abrirWhatsAppDirecto(telefono, mensajeTexto) {
+            if(!telefono || telefono.trim() === '') {
+                return mostrarToast("⚠️ Este usuario no tiene número de teléfono guardado.", "aviso");
+            }
+            // Limpiamos el teléfono por si tiene espacios o guiones
+            const telLimpio = telefono.replace(/\D/g, '');
+            const url = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensajeTexto)}`;
+            window.location.href = url;
         }
 
         function hoyString() {
@@ -284,13 +310,12 @@
         function cerrarSesion() { location.reload(); }
 
         // ==========================================
-        // LA CARTERA VIRTUAL
+        // LA CARTERA VIRTUAL Y NORMAS
         // ==========================================
         async function abrirCartera() {
             const modal = document.getElementById('modalCartera');
             const contenido = modal.querySelector('div');
             const lista = document.getElementById('listaMovimientos');
-            
             const resSaldo = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}&select=saldo`, { headers, cache: 'no-store' });
             const dataSaldo = await resSaldo.json();
             usuarioActual.saldo = dataSaldo[0].saldo;
@@ -305,7 +330,6 @@
                 if(!res.ok) { lista.innerHTML = '<p class="text-center text-rose-500 text-sm mt-4 font-bold">⚠️ Error al conectar con el historial.</p>'; return; }
                 let movs = await res.json();
                 movs.reverse(); 
-                
                 lista.innerHTML = '';
                 if(movs.length === 0) { lista.innerHTML = '<p class="text-center text-slate-400 text-sm mt-4 italic">Todavía no has gastado ni recargado nada.</p>'; return; }
                 movs.forEach(m => {
@@ -314,13 +338,9 @@
                     const colorFondo = esPositivo ? 'bg-emerald-50' : 'bg-rose-50';
                     const icono = esPositivo ? '🟢' : '🔴';
                     const signo = esPositivo ? '+' : '';
-                    
                     lista.innerHTML += `
                         <div class="flex justify-between items-center p-4 rounded-2xl ${colorFondo} border border-slate-100/50 shadow-sm">
-                            <div class="flex items-center gap-3 truncate pr-2">
-                                <span class="text-lg">${icono}</span>
-                                <span class="font-bold text-sm text-slate-700 truncate">${m.tipo}</span>
-                            </div>
+                            <div class="flex items-center gap-3 truncate pr-2"><span class="text-lg">${icono}</span><span class="font-bold text-sm text-slate-700 truncate">${m.tipo}</span></div>
                             <span class="font-black text-lg ${colorTexto} whitespace-nowrap">${signo}${m.cantidad}€</span>
                         </div>`;
                 });
@@ -335,9 +355,6 @@
             setTimeout(() => modal.classList.add('hidden'), 300);
         }
 
-        // ==========================================
-        // LAS NORMAS DEL VEHÍCULO
-        // ==========================================
         function abrirNormas() {
             const modal = document.getElementById('modalNormas');
             const contenido = modal.querySelector('div');
@@ -354,7 +371,71 @@
         }
 
         // ==========================================
-        // FUNCIONES SÚPER JEFE (ADMIN)
+        // EDICIÓN DE PERFILES DE USUARIO (JEFE)
+        // ==========================================
+        function abrirModalEditar(id, nombre, telefono, punto) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('nombreEditarUsuario').innerText = nombre.split(" ")[0];
+            document.getElementById('editUserPhone').value = telefono !== 'undefined' ? telefono : '';
+            document.getElementById('editUserPunto').value = punto !== 'undefined' ? punto : '';
+            
+            const modal = document.getElementById('modalEditarUsuario');
+            const contenido = modal.querySelector('div');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); contenido.classList.remove('scale-95'); }, 10);
+        }
+
+        function cerrarModalEditar() {
+            const modal = document.getElementById('modalEditarUsuario');
+            const contenido = modal.querySelector('div');
+            modal.classList.add('opacity-0');
+            contenido.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        async function guardarUsuario() {
+            const id = document.getElementById('editUserId').value;
+            const tel = document.getElementById('editUserPhone').value.trim();
+            const punto = document.getElementById('editUserPunto').value.trim();
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${id}`, { 
+                    method: 'PATCH', headers, body: JSON.stringify({ telefono: tel, punto_recogida: punto }) 
+                });
+                
+                if(!res.ok) {
+                    mostrarToast("⚠️ Error: Comprueba que creaste las columnas en Supabase.", "error");
+                    return;
+                }
+
+                mostrarToast("✅ Perfil guardado con éxito.", "exito");
+                cerrarModalEditar();
+                cargarPanelJefe(); // Recargar para ver los cambios
+            } catch(e) { 
+                mostrarToast("❌ Error de red al guardar.", "error"); 
+            }
+        }
+
+        // ==========================================
+        // COMUNICACIONES DE RUTA (JEFE)
+        // ==========================================
+        function avisarSalidaGlobal() {
+            const msg = `📢 ¡Chicos, el coche ya está en marcha! Empiezo la ruta. Os iré avisando uno a uno cuando vaya de camino a recogeros. 🏁🚗`;
+            abrirWhatsApp(msg, 0); 
+        }
+
+        function avisarYendo(telefono, nombre, punto) {
+            const msg = `🚗 ¡Buenas ${nombre}! Arranco para allá. Voy de camino a recogerte a: *${punto}*. ¡Ve preparándote! 🚙💨`;
+            abrirWhatsAppDirecto(telefono, msg);
+        }
+
+        function avisarAbajo(telefono, nombre, punto) {
+            const msg = `📍 ¡${nombre}, ya estoy abajo en *${punto}*! Empiezan a contar los 5 minutos de cortesía. ⏱️`;
+            abrirWhatsAppDirecto(telefono, msg);
+        }
+
+        // ==========================================
+        // FUNCIONES SÚPER JEFE (ADMIN) BÁSICAS
         // ==========================================
         async function añadirSaldo(userId, name) {
             const extra = prompt(`¿Cuánto dinero le quieres recargar a ${name}?\n(Escribe solo el número, ej: 5)`);
@@ -415,10 +496,16 @@
             usuariosGlobal.forEach(u => {
                 if(u.id === usuarioActual.id) return; 
                 let colorSaldo = u.saldo <= 0 ? 'text-rose-500' : (u.saldo === 1 ? 'text-orange-500' : 'text-slate-500');
+                
                 listaSaldos.innerHTML += `
-                    <div class="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                        <div class="truncate mr-2"><p class="font-bold text-sm truncate">${u.nombre}</p><p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p></div>
-                        <button onclick="añadirSaldo('${u.id}', '${u.nombre}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 transition-all">+ €</button>
+                    <div class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2">
+                        <div class="flex justify-between items-center">
+                            <div class="truncate mr-2"><p class="font-bold text-sm truncate text-slate-700">${u.nombre}</p><p class="text-xs font-black ${colorSaldo}">${u.saldo}€</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="abrirModalEditar('${u.id}', '${u.nombre}', '${u.telefono}', '${u.punto_recogida}')" class="bg-slate-100 text-slate-500 px-3 py-2 rounded-lg font-bold text-xs hover:bg-slate-200 active:scale-95 transition-all">✏️</button>
+                                <button onclick="añadirSaldo('${u.id}', '${u.nombre}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg font-bold text-xs hover:bg-blue-200 active:scale-95 transition-all">+ €</button>
+                            </div>
+                        </div>
                     </div>`;
             });
 
@@ -433,31 +520,46 @@
                 const plazasLibresReales = 4 - resViaje.length;
 
                 let htmlAsientos = '';
-                if(resViaje.length === 0) { htmlAsientos = '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg">Coche vacío</p>'; } 
+                if(resViaje.length === 0) { htmlAsientos = '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg text-center">Coche vacío</p>'; } 
                 else {
-                    htmlAsientos = '<div class="space-y-2 mt-2">';
+                    htmlAsientos = '<div class="space-y-3 mt-3">';
                     resViaje.forEach(r => {
                         const usr = usuariosGlobal.find(u => u.id === r.usuario_id);
                         const nombreUsr = usr ? usr.nombre.split(" ")[0] : 'Desconocido';
+                        const tel = usr ? (usr.telefono || '') : '';
+                        const punto = usr ? (usr.punto_recogida || 'Punto sin definir') : 'Punto sin definir';
+
                         htmlAsientos += `
-                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100 text-sm">
-                                <span class="font-bold text-slate-600 truncate w-32">💺 ${r.asiento.replace('atras_','')} <span class="font-normal">(${nombreUsr})</span></span>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-black text-slate-700 truncate pr-2">💺 ${r.asiento.replace('atras_','')} <span class="font-medium text-slate-500">(${nombreUsr})</span></span>
+                                    <div class="flex gap-1 shrink-0">
+                                        <button onclick="moverReserva('${r.id}', '${v.id}', '${r.asiento}')" class="text-blue-600 bg-blue-100 px-2 py-1.5 rounded-lg font-bold hover:bg-blue-200 text-xs">Mover</button>
+                                        <button onclick="eliminarReserva('${r.id}', '${r.usuario_id}', '${v.id}')" class="text-rose-600 bg-rose-100 px-2 py-1.5 rounded-lg font-bold hover:bg-rose-200 text-xs">Echar</button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-slate-500 mb-3 truncate flex items-center gap-1">📍 <span class="font-medium">${punto}</span></div>
                                 <div class="flex gap-2">
-                                    <button onclick="moverReserva('${r.id}', '${v.id}', '${r.asiento}')" class="text-blue-500 bg-blue-50 px-2 py-1 rounded font-bold hover:bg-blue-100 text-xs">Mover</button>
-                                    <button onclick="eliminarReserva('${r.id}', '${r.usuario_id}', '${v.id}')" class="text-rose-500 bg-rose-50 px-2 py-1 rounded font-bold hover:bg-rose-100 text-xs">Echar</button>
+                                    <button onclick="avisarYendo('${tel}', '${nombreUsr}', '${punto}')" class="w-1/2 bg-blue-100 text-blue-700 border border-blue-200 hover:bg-blue-200 font-bold py-2 rounded-lg text-xs transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95">🚙 Voy para allá</button>
+                                    <button onclick="avisarAbajo('${tel}', '${nombreUsr}', '${punto}')" class="w-1/2 bg-emerald-100 text-emerald-700 border border-emerald-200 hover:bg-emerald-200 font-bold py-2 rounded-lg text-xs transition-all flex items-center justify-center gap-1 shadow-sm active:scale-95">📍 Estoy abajo</button>
                                 </div>
                             </div>`;
                     });
                     htmlAsientos += '</div>';
                 }
+
+                const botonAvisoSalida = resViaje.length > 0 
+                    ? `<button onclick="avisarSalidaGlobal()" class="w-full mt-4 bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 font-bold py-3 rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">📢 Coche en Marcha (Avisar al Grupo)</button>` 
+                    : '';
+
                 listaViajes.innerHTML += `
                     <div class="p-4 border-2 border-slate-200 rounded-2xl shadow-sm bg-white">
                         <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
                             <div><p class="font-black capitalize text-lg text-slate-700">${fechaLimpia}</p><p class="text-xs font-bold text-slate-400 mt-1">Plazas libres: ${plazasLibresReales} | ${v.estado.toUpperCase()}</p></div>
                             <button onclick="cambiarEstadoViaje('${v.id}', '${esAbierto ? 'cerrado' : 'abierto'}')" class="${colorBtn} px-3 py-2 rounded-lg font-bold text-xs">${esAbierto ? 'Cerrar Viaje' : 'Abrir Viaje'}</button>
                         </div>
-                        <div class="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Pasajeros:</div>
                         ${htmlAsientos}
+                        ${botonAvisoSalida}
                     </div>`;
             });
         }
@@ -698,7 +800,6 @@
                 await fetch(`${SUPABASE_URL}/rest/v1/usuarios?id=eq.${usuarioActual.id}`, { method: 'PATCH', headers, body: JSON.stringify({ saldo: nuevoSaldo }) });
                 usuarioActual.saldo = nuevoSaldo; 
 
-                // AQUÍ EL CAMBIO SOLICITADO: Incluir la fecha extraída en el tipo de movimiento
                 const conceptoHistorial = `🚗 Reserva: ${fechasTexto.join(' | ')}`;
                 await fetch(`${SUPABASE_URL}/rest/v1/movimientos_saldo`, { method: 'POST', headers, body: JSON.stringify({ usuario_id: usuarioActual.id, cantidad: -costeTotal, tipo: conceptoHistorial }) });
 
@@ -712,7 +813,6 @@
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
                 
                 if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
-                
                 abrirWhatsApp(mensaje, 1800);
             } catch(e) { mostrarToast("📡 Error de red al procesar las reservas.", "error"); }
         }
