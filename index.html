@@ -648,7 +648,8 @@
                 const miNombre = usuarioActual.nombre.split(" ")[0];
                 const mensaje = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Al final NO voy a poder ir en el coche el día *${fechaLimpia}* (estaba en ${nombresAsientos[asiento]}). Acabo de cancelar la plaza por la web para dejarla libre. ¡Perdona las molestias!`;
 
-                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank'); }, 1500);
+                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone en la cancelación
+                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`; }, 1500);
 
             } catch(e) { mostrarToast("❌ Error al cancelar reserva.", "error"); }
         }
@@ -660,14 +661,10 @@
             const costeTotal = viajesSeleccionados.length;
             const nombresAsientos = { 'copiloto': 'Copiloto 🚘', 'atras_izq': 'Atrás Izquierda 👈', 'atras_cen': 'Atrás Medio 🧍', 'atras_der': 'Atrás Derecha 👉' };
 
-            // ===============================================
-            // NUEVO: SISTEMA DE CONFIRMACIÓN ANTES DE COBRAR
-            // ===============================================
             let fechasTexto = [];
             viajesSeleccionados.forEach(vId => {
                 const btnDia = document.getElementById(`btn_dia_${vId}`);
                 if (btnDia) {
-                    // Limpiamos los saltos de línea y el icono del cochecito
                     const textoLimpio = btnDia.innerText.replace(/\n/g, ' ').replace('🚗', '').trim();
                     fechasTexto.push(textoLimpio);
                 }
@@ -675,14 +672,13 @@
             
             const confirmacion = confirm(`❓ CONFIRMACIÓN DE RESERVA\n\nVas a reservar el asiento de ${nombresAsientos[asiento]} para ${costeTotal} día(s):\n📅 ${fechasTexto.join(' | ')}\n\n💸 Coste total: ${costeTotal}€\n\n¿Estás seguro de que quieres confirmar tu sitio?`);
             
-            // Si le da a cancelar, cortamos la función aquí y no pasa nada
             if (!confirmacion) return; 
-            // ===============================================
 
             if (usuarioActual.saldo < costeTotal) {
                 mostrarToast(`🚫 Necesitas ${costeTotal}€ y tienes ${usuarioActual.saldo}€. Redirigiendo a WhatsApp...`, "error");
                 const mensajeRecarga = `🚗 ¡Buenas Yisu! Soy ${miNombre}. Necesito recargar saldo para reservar ${costeTotal} días. 💸`;
-                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`, '_blank'); }, 1800);
+                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone si no hay saldo
+                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensajeRecarga)}`; }, 1800);
                 return; 
             }
 
@@ -708,7 +704,9 @@
                 const mensaje = `🚗 ¡Buenas! Soy ${miNombre}. Acabo de pillarme el asiento de *${nombresAsientos[asiento]}* para *${costeTotal} días* distintos. ¡Nos vemos!`;
                 
                 if (nuevoSaldo === 0) setTimeout(() => mostrarToast("⚠️ Te has quedado a 0€. ¡Recarga pronto!", "aviso"), 800);
-                setTimeout(() => { window.open(`https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`, '_blank'); }, 1800);
+                
+                // Aquí usamos window.location.href para evitar el bloqueador de popups del iPhone en la confirmación
+                setTimeout(() => { window.location.href = `https://api.whatsapp.com/send?phone=34674596477&text=${encodeURIComponent(mensaje)}`; }, 1800);
             } catch(e) { mostrarToast("📡 Error de red al procesar las reservas.", "error"); }
         }
 
