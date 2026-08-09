@@ -249,7 +249,7 @@
         // Contactar Jefe (Botón de Ayuda 💬)
         function contactarJefe() {
             const miNombre = usuarioActual ? usuarioActual.nombre.split(" ")[0] : '';
-            const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. Te escribo porque tengo una duda/problema con la app del coche: `;
+            const mensaje = `🚗 ¡Buenas Jysus! Soy ${miNombre}. `;
             // Cambia el "34674596477" si fuera necesario para asegurarnos de que va a tu número
             const url = `https://wa.me/34674596477?text=${encodeURIComponent(mensaje)}`;
             window.location.href = url;
